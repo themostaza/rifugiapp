@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       .insert({
         check_in: checkIn,
         check_out: checkOut,
-        still_on_hold: true,
+        still_on_hold: false,
         time_is_up_at: timeIsUpAt.toISOString()
       })
       .select()

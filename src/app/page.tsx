@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, ChevronDown, Users, Plus, Minus, Search, ShoppingCart } from 'lucide-react'
+import { Calendar, ChevronDown, Users, Plus, Minus, Search, ShoppingCart, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -196,32 +196,29 @@ const RoomList: React.FC<RoomListProps> = ({
               value={room.roomId.toString()}
               className="border rounded-lg overflow-hidden"
             >
-              <div className="flex items-center w-full h-10 hover:bg-gray-100">
-                <AccordionTrigger className="flex justify-between items-center w-full">
-                  <div className="flex items-center gap-4 p-4">
-                    {/* <span className="flex items-center justify-center rounded-full w-6 h-6 bg-gray-700 text-white">
-                      {room.roomId}
-                    </span> */}
-                    <h3 className="text-lg font-semibold">
+              <div className="flex items-center w-full min-h-[48px] hover:bg-gray-100">
+                <AccordionTrigger className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full px-2 sm:px-4 py-2 sm:py-0">
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <h3 className="text-base sm:text-lg font-semibold">
                       {room.description}
                     </h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <p className="text-gray-600">{room.availableBeds.length} letti disponibili</p>
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
+                    <p className="text-sm sm:text-base text-gray-600">{room.availableBeds.length} letti disponibili</p>
                     {roomGuests.length > 0 && (
                       <>
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs sm:text-sm">
                           {roomGuests.length} ospiti assegnati
                         </span>
-                        <span className="text-gray-700 font-medium">
-                        €{price.totalPrice.toFixed(2)}
+                        <span className="text-sm sm:text-base text-gray-700 font-medium">
+                          €{price.totalPrice.toFixed(2)}
                         </span>
                       </>
                     )}
                   </div>
                 </AccordionTrigger>
               </div>
-              <AccordionContent className="p-4">
+              <AccordionContent className="sm:p-4 my-2 sm:my-0">
               <RoomContent 
                 room={{
                   id: room.roomId,
@@ -303,6 +300,7 @@ export default function BookingPage() {
   const [additionalServicesCost, setAdditionalServicesCost] = useState(0);
   const [currentBookingId, setCurrentBookingId] = useState<number | null>(null);
   const serviceWorkerRef = useRef<ServiceWorker | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -414,6 +412,7 @@ export default function BookingPage() {
     if (!checkIn || !checkOut) return;
   
     try {
+      setIsSearching(true);
       setSearchError(null);
       const guests = [
         { type: 'adult', count: adults },
@@ -503,6 +502,8 @@ export default function BookingPage() {
       console.error('Search error:', error);
       setSearchError('Error during search. Please try again.');
       setShowResults(false);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -666,13 +667,13 @@ export default function BookingPage() {
       onLanguageChange={setLanguage}
     />
 
-    <main className="flex-grow container mx-auto px-4 py-8 space-y-8">
+    <main className="flex-grow container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
       {currentView === 'search' ? (
         // Vista di ricerca e selezione delle stanze
         <>
-          <Card className="p-6 max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-4 gap-2">
-              <div className="md:col-span-2">
+          <Card className="p-4 sm:p-6 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Date del soggiorno (checkin - checkout)
                 </label>
@@ -709,7 +710,7 @@ export default function BookingPage() {
                         if (range?.from) handleCalendarSelect(range.from)
                         if (range?.to) setCheckOut(range.to)
                       }}
-                      numberOfMonths={2}
+                      numberOfMonths={1}
                       disabled={(date) => date < new Date()}
                       locale={it}
                     />
@@ -732,7 +733,7 @@ export default function BookingPage() {
                       <ChevronDown className="ml-auto h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80">
+                  <PopoverContent className="w-[280px] sm:w-80">
                     <div className="px-1 divide-y">
                       <GuestCounter
                         title="Adulti"
@@ -757,47 +758,54 @@ export default function BookingPage() {
                 </Popover>
               </div>
               
+              <div>
+                
               <Button 
-                className="w-full mt-6 bg-gray-900 hover:bg-gray-800 text-white" 
-                disabled={!checkIn || !checkOut || totalGuests === 0}
+                className="w-full bg-gray-900 hover:bg-gray-800 text-white" 
+                disabled={!checkIn || !checkOut || totalGuests === 0 || isSearching}
                 onClick={handleSearch}
               >
-                <Search className="h-4 w-4 mr-2"/>
-                Cerca
+                {isSearching ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4 mr-2"/>
+                )}
+                {isSearching ? 'Cerco...' : 'Cerca'}
               </Button>
+              </div>
             </div>
           </Card>
 
           {searchError && (
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto px-2 sm:px-4">
               {searchError === 'blocked_days' && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <div className="p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 flex items-start sm:items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-1 sm:mt-0" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
                   </svg>
-                  <span>
+                  <span className="text-sm sm:text-base">
                     <strong>Siamo spiacenti, nessun risultato disponibile.</strong> Hai bisogno di aiuto? Contattaci al numero +39 0436 860294 / +39 333 143 4408 oppure inviando una mail a rifugiodibona@gmail.com
                   </span>
                 </div>
               )}
               {searchError === 'booking_in_progress' && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700">
+                <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm sm:text-base">
                   <p>Ci sono prenotazioni in corso per queste date. Riprova tra qualche minuto.</p>
                 </div>
               )}
               {searchError === 'sold_out' && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm sm:text-base">
                   <p>Ci dispiace, non ci sono camere disponibili per le date selezionate.</p>
                 </div>
               )}
               {searchError?.startsWith('too_little_availability') && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm sm:text-base">
                   <p>Non ci sono abbastanza letti disponibili per il numero di ospiti selezionato.</p>
                 </div>
               )}
               {['blocked_days', 'booking_in_progress', 'sold_out'].includes(searchError) === false && 
               !searchError?.startsWith('too_little_availability') && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm sm:text-base">
                   <p>Si è verificato un errore durante la ricerca. Riprova più tardi.</p>
                 </div>
               )}
@@ -805,23 +813,22 @@ export default function BookingPage() {
           )}
 
           {showResults && !searchError && (
-            <Card className="p-6 max-w-4xl mx-auto">
+            <Card className="mt-4 sm:mt-0 sm:p-6 max-w-4xl mx-auto border-0 shadow-none sm:border sm:shadow">
               <div className="mb-4">
-              <p className="mb-3 text-gray-700">
-                <span>1. Seleziona la modalità di pernottamento tra le seguenti:</span><br/>
-                <span className="">• <strong>Mezza Pensione</strong>: include la cena e la colazione</span><br/>
-                <span className="">• <strong>Bed & Breakfast</strong>: include solo la colazione</span>
-              </p>
-              <Select 
-                value={pensionType} 
-                onValueChange={(value: string) => {
-                  // Only set the state if the value is one of the expected values
-                  if (value === 'bb' || value === 'hb') {
-                    setPensionType(value as 'bb' | 'hb');
-                  }
-                }}
-              >
-                  <SelectTrigger className="w-auto">
+                <p className="mb-3 text-gray-700 text-sm sm:text-base">
+                  <span>1. Seleziona la modalità di pernottamento tra le seguenti:</span><br/>
+                  <span className="">• <strong>Mezza Pensione</strong>: include la cena e la colazione</span><br/>
+                  <span className="">• <strong>Bed & Breakfast</strong>: include solo la colazione</span>
+                </p>
+                <Select 
+                  value={pensionType} 
+                  onValueChange={(value: string) => {
+                    if (value === 'bb' || value === 'hb') {
+                      setPensionType(value as 'bb' | 'hb');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-auto">
                     <SelectValue placeholder="Seleziona trattamento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -830,7 +837,7 @@ export default function BookingPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <span>2. Seleziona un letto per ciascun ospite.</span>
+              <span className="text-sm sm:text-base">2. Seleziona un letto per ciascun ospite.</span>
               <RoomList 
                 rooms={rooms}
                 onSelect={handleRoomSelect}

@@ -218,7 +218,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
         <Lock className="h-4 w-4 text-gray-700" />
-        <h3 className="font-medium">Supplemento privacy</h3>
+        <h3 className="font-medium text-sm sm:text-base">Supplemento privacy</h3>
         
         <TooltipProvider>
           <Tooltip>
@@ -227,15 +227,15 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                 <Info className="h-4 w-4 text-gray-500" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
+            <TooltipContent className="max-w-xs text-sm">
               <p>Se desideri maggiore riservatezza durante il tuo soggiorno, puoi bloccare uno o più posti letto disponibili nella stanza per ogni notte, in modo che non possano essere prenotati da qualcun&apos;altro.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+        <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
           Se desideri maggiore riservatezza durante il tuo soggiorno, puoi bloccare uno o più posti letto disponibili nella stanza per ogni notte, in modo che non possano essere prenotati da &apos;altro.
         </p>
 
@@ -249,9 +249,9 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
             return (
               <div 
                 key={date} 
-                className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-gray-300"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-white rounded-lg border hover:border-gray-300 gap-2 sm:gap-0"
               >
-                <div className="font-medium">
+                <div className="font-medium text-sm sm:text-base">
                   Notte del {formatDate(date)}
                 </div>
                 
@@ -262,7 +262,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                     <Button 
                       variant={blockedBedsForDate.length > 0 ? "secondary" : "outline"} 
                       size="sm"
-                      className={`flex items-center justify-between min-w-40 ${
+                      className={`flex items-center justify-between w-full sm:w-auto min-w-40 text-sm ${
                         blockedBedsForDate.length > 0 ? "bg-gray-50 text-gray-600 hover:bg-blue-100" : ""
                       }`}
                     >
@@ -270,23 +270,21 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                       <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Blocca letti - Notte del {formatDate(date)}</DialogTitle>
+                      <DialogTitle className="text-lg sm:text-xl">Blocca letti - Notte del {formatDate(date)}</DialogTitle>
                     </DialogHeader>
                     
                     {blockableBeds.length > 0 ? (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 gap-3 max-h-72 overflow-y-auto">
+                        <div className="grid grid-cols-1 gap-2 sm:gap-3 max-h-[60vh] overflow-y-auto">
                           {blockableBeds.map(bed => {
                             const isBlocked = blockedBedsForDate.includes(bed.id);
                             
-                            // Calculate the position of this bed in the pricing tier
                             const position = isBlocked 
                               ? blockedBedsForDate.indexOf(bed.id)
                               : blockedBedsForDate.length;
                             
-                            // Get the appropriate price tier
                             const priceTier = position < pricingData.length 
                               ? pricingData[position] 
                               : pricingData[pricingData.length - 1];
@@ -297,7 +295,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                               <div 
                                 key={bed.id} 
                                 className={`
-                                  p-3 rounded-lg border flex items-center justify-between
+                                  p-2 sm:p-3 rounded-lg border flex items-center justify-between
                                   ${isBlocked ? 'bg-blue-50 border-gray-200' : 'bg-white'}
                                   hover:border-blue-300 cursor-pointer transition-colors
                                 `}
@@ -313,31 +311,31 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                                   />
                                   <label 
                                     htmlFor={`bed-${date}-${bed.id}`}
-                                    className="cursor-pointer"
+                                    className="cursor-pointer text-sm sm:text-base"
                                   >
                                     {bed.name}
                                   </label>
                                 </div>
-                                <span className="text-sm font-medium">€{bedPrice.toFixed(2)}</span>
+                                <span className="text-xs sm:text-sm font-medium">€{bedPrice.toFixed(2)}</span>
                               </div>
                             );
                           })}
                         </div>
                         
                         <div className="flex justify-between pt-3 border-t">
-                          <span className="font-medium">Totale per questa notte:</span>
-                          <span className="font-bold">€{nightPrice.toFixed(2)}</span>
+                          <span className="font-medium text-sm sm:text-base">Totale per questa notte:</span>
+                          <span className="font-bold text-sm sm:text-base">€{nightPrice.toFixed(2)}</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 bg-yellow-50 rounded-lg text-yellow-800">
+                      <div className="p-3 sm:p-4 bg-yellow-50 rounded-lg text-yellow-800 text-sm sm:text-base">
                         Non ci sono letti disponibili da bloccare per questa notte.
                       </div>
                     )}
                   </DialogContent>
                 </Dialog>
                 
-                <div className="font-medium min-w-20 text-right">
+                <div className="font-medium text-sm sm:text-base text-right">
                   {nightPrice > 0 && `€${nightPrice.toFixed(2)}`}
                 </div>
               </div>

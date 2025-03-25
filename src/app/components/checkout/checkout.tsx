@@ -357,7 +357,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Main Content */}
-      <main className="flex-grow container mx-auto px-4 py-8 space-y-8">
+      <main className="flex-grow container mx-auto sm:px-4 py-8 space-y-8">
         <div className="max-w-4xl mx-auto">
           <Button
             variant="ghost"
@@ -368,7 +368,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
             Torna alle stanze
           </Button>
 
-          <Card className="p-6 space-y-8">
+          <Card className="p-1 sm:p-6 sm:shadow-md sm:border space-y-8">
             {/* Additional Services Section */}
             <section>
               <h2 className="text-xl font-semibold mb-4">4. Servizi aggiuntivi</h2>

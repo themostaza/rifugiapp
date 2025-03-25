@@ -248,28 +248,46 @@ const BedAssignment = ({
   const hasDiscount = discount > 0;
 
   return (
-    <div className="flex items-center gap-4 py-2">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 py-2">
       <span className="min-w-24">{labels[guestType]}</span>
-      <Select value={selectedBedId || ''} onValueChange={onBedSelect}>
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Seleziona letto" />
-        </SelectTrigger>
-        <SelectContent>
-          {availableBeds.map((bedId) => {
-            // Trova il letto corrispondente per ottenere il nome
-            const bed = allBedsWithPricing.find(b => b.id.toString() === bedId);
-            return (
-              <SelectItem key={bedId} value={bedId}>
-                {bed ? bed.name : `Letto ${bedId}`}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        
+        <Select value={selectedBedId || ''} onValueChange={onBedSelect}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Seleziona letto" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableBeds.map((bedId) => {
+              const bed = allBedsWithPricing.find(b => b.id.toString() === bedId);
+              return (
+                <SelectItem key={bedId} value={bedId}>
+                  {bed ? bed.name : `Letto ${bedId}`}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          className="text-gray-500 hover:text-red-600 sm:hidden"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          className="text-gray-500 hover:text-red-600 hidden sm:block"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
       
       {selectedBedId && (
-        <div className="flex flex-col">
-          <span className="text-gray-700 font-medium whitespace-nowrap">
+        <div className="flex flex-col w-full sm:w-auto">
+          <span className="text-gray-700 font-medium">
             €{discountedPrice.toFixed(2)} per notte
           </span>
           
@@ -281,14 +299,7 @@ const BedAssignment = ({
         </div>
       )}
       
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onDelete}
-        className="text-gray-500 hover:text-red-600"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      
     </div>
   )
 }
@@ -347,15 +358,15 @@ const RoomContent = ({
       
       <div className="space-y-4">
         {/* Mappa dei letti */}
-        <div className="bg-white p-4 rounded-lg border">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-lg sm:border">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:mb-4 p-2 sm:p-4 gap-2">
             <h3 className="text-lg font-medium">Mappa dei letti</h3>
             
             {availabilityByNight.length > 0 && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2 w-full sm:w-auto">
                       <Info className="h-4 w-4" />
                       <span>Informazioni</span>
                     </Button>
@@ -379,7 +390,7 @@ const RoomContent = ({
           />
         </div>
         
-        <div className="flex gap-4 flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
           <BedSelection 
             guestType="adult"
             availableCount={unassignedGuests.adults}
@@ -403,19 +414,21 @@ const RoomContent = ({
         {assignedGuests.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-medium mb-2">Ospiti assegnati a questa stanza:</h4>
-            {assignedGuests.map((guest, index) => (
-              <BedAssignment
-                key={index}
-                guestType={guest.type}
-                selectedBedId={guest.bedId}
-                onBedSelect={(bedId) => handleBedSelect(index, bedId)}
-                onDelete={() => handleDeleteGuest(index)}
-                availableBeds={availableBedIds.concat(guest.bedId ? [guest.bedId] : [])}
-                allBedsWithPricing={room.availableBedIds || []}
-                pensionType={pensionType}
-                guestTypes={guestTypes}
-              />
-            ))}
+            <div className="space-y-3">
+              {assignedGuests.map((guest, index) => (
+                <BedAssignment
+                  key={index}
+                  guestType={guest.type}
+                  selectedBedId={guest.bedId}
+                  onBedSelect={(bedId) => handleBedSelect(index, bedId)}
+                  onDelete={() => handleDeleteGuest(index)}
+                  availableBeds={availableBedIds.concat(guest.bedId ? [guest.bedId] : [])}
+                  allBedsWithPricing={room.availableBedIds || []}
+                  pensionType={pensionType}
+                  guestTypes={guestTypes}
+                />
+              ))}
+            </div>
           </div>
         )}
 
