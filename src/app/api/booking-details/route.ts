@@ -26,11 +26,11 @@ interface RoomReservation {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const bookingId = searchParams.get('id');
+    const externalId = searchParams.get('external_id');
 
-    if (!bookingId) {
+    if (!externalId) {
       return NextResponse.json(
-        { error: 'Booking ID is required' },
+        { error: 'External ID is required' },
         { status: 400 }
       );
     }
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
           )
         )
       `)
-      .eq('id', bookingId)
+      .eq('external_id', externalId)
       .single();
 
     if (error) {
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const bookingId = searchParams.get('id');
+    const bookingId = searchParams.get('external_id');
 
     if (!bookingId) {
       return NextResponse.json(
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     const { error } = await supabase
       .from('Basket')
       .update({ isCancelled: true })
-      .eq('id', bookingId);
+      .eq('external_id', bookingId);
 
     if (error) {
       console.error('Error cancelling booking:', error);

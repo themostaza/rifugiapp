@@ -97,7 +97,7 @@ export default function ConfirmationPage() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('it-IT', {
       day: 'numeric',
-      month: 'long',
+      month: 'numeric',
       year: 'numeric'
     })
   }
@@ -264,10 +264,10 @@ export default function ConfirmationPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Numero prenotazione</p>
-                  <p className="font-medium">{bookingData.id}</p>
+                  <p className="font-medium break-all">{bookingData.id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">ID Pagamento Stripe</p>
+                  <p className="text-sm text-gray-500">ID Stripe</p>
                   <p className="font-medium break-all">{bookingData.stripeId || 'N/A'}</p>
                 </div>
                 <div>
