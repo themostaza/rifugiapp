@@ -184,10 +184,10 @@ export async function POST(request: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart/${basket.id.toString()}?payment_status=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart/${basket.external_id}?payment_status=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?step=checkout`,
       metadata: {
-        bookingId: basket.id.toString()
+        bookingId: basket.external_id
       },
       allow_promotion_codes: true,
       billing_address_collection: 'required',

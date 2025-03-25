@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface BookingData {
   id: number;
+  external_id: string;
   checkIn: string;
   checkOut: string;
   guestName: string;
@@ -55,12 +56,12 @@ export default function ConfirmationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const params = useParams()
-  const bookingId = params.id as string
+  const bookingExternalId = params.id as string
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {
-        const response = await fetch(`/api/booking-details?id=${bookingId}`)
+        const response = await fetch(`/api/booking-details?external_id=${bookingExternalId}`)
         if (!response.ok) {
           throw new Error('Failed to fetch booking details')
         }
@@ -74,18 +75,18 @@ export default function ConfirmationPage() {
     }
 
     fetchBookingDetails()
-  }, [bookingId])
+  }, [bookingExternalId])
 
   const handleCancelBooking = async () => {
     try {
-      const response = await fetch(`/api/booking-details?id=${bookingId}`, {
+      const response = await fetch(`/api/booking-details?external_id=${bookingExternalId}`, {
         method: 'POST'
       })
       if (!response.ok) {
         throw new Error('Failed to cancel booking')
       }
       // Refresh booking data after cancellation
-      const updatedResponse = await fetch(`/api/booking-details?id=${bookingId}`)
+      const updatedResponse = await fetch(`/api/booking-details?external_id=${bookingExternalId}`)
       const updatedData = await updatedResponse.json()
       setBookingData(updatedData)
     } catch (err) {
@@ -267,7 +268,7 @@ export default function ConfirmationPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">ID Pagamento Stripe</p>
-                  <p className="font-medium">{bookingData.stripeId || 'N/A'}</p>
+                  <p className="font-medium break-all">{bookingData.stripeId || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Check-in</p>
