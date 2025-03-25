@@ -290,20 +290,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
       // Get the selected country object
       const selectedCountryObj = countries.find(c => c.code === selectedCountry);
       
-      // Store current state in URL parameters
-      const stateParams = new URLSearchParams({
-        customerName,
-        customerPhone,
-        customerEmail,
-        selectedCountry,
-        selectedRegion,
-        notes,
-        services: JSON.stringify(selectedServices)
-      });
-      
-      // Update URL without reloading the page
-      window.history.replaceState({}, '', `?${stateParams.toString()}`);
-      
       const response = await fetch('/api/create-booking', {
         method: 'POST',
         headers: {
@@ -359,30 +345,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
       alert('Si è verificato un errore durante il pagamento. Riprova più tardi.');
     }
   };
-
-  // Add effect to restore state from URL parameters
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    
-    // Restore form state from URL parameters
-    setCustomerName(params.get('customerName') || '');
-    setCustomerPhone(params.get('customerPhone') || '');
-    setCustomerEmail(params.get('customerEmail') || '');
-    setSelectedCountry(params.get('selectedCountry') || '');
-    setSelectedRegion(params.get('selectedRegion') || '');
-    setNotes(params.get('notes') || '');
-    
-    // Restore selected services
-    const servicesParam = params.get('services');
-    if (servicesParam) {
-      try {
-        const restoredServices = JSON.parse(servicesParam);
-        setSelectedServices(restoredServices);
-      } catch (error) {
-        console.error('Error restoring services:', error);
-      }
-    }
-  }, []);
 
   // Handle opening Stripe checkout in new tab
   const handleOpenStripeCheckout = () => {

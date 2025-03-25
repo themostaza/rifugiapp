@@ -14,7 +14,7 @@ interface Guest {
 
 interface Bed {
   id: number;
-  // ... existing code ...
+  
 }
 
 interface Room {
@@ -49,10 +49,8 @@ export async function POST(request: Request) {
       customerName,
       customerPhone,
       customerEmail,
-      selectedCountry,
       selectedRegion,
       notes,
-      additionalServicesCost,
       totalAmount,
       countryName
     } = body;
@@ -178,7 +176,7 @@ export async function POST(request: Request) {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: `Prenotazione dal ${new Date(checkIn).toLocaleDateString()} al ${new Date(checkOut).toLocaleDateString()}`,
+              name: `Check-in: ${new Date(checkIn).toLocaleDateString()} Check-out: ${new Date(checkOut).toLocaleDateString()}`,
             },
             unit_amount: Math.round(totalAmount * 100),
           },
@@ -186,25 +184,10 @@ export async function POST(request: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?payment_status=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?payment_status=cancelled`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart/${basket.id.toString()}?payment_status=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?step=checkout`,
       metadata: {
-        bookingId: basket.id.toString(),
-        checkIn: checkInDate.toISOString(),
-        checkOut: checkOutDate.toISOString(),
-        pensionType,
-        rooms: JSON.stringify(rooms),
-        assignedGuests: JSON.stringify(assignedGuests),
-        roomPrivacyCosts: JSON.stringify(roomPrivacyCosts),
-        guestTypes: JSON.stringify(guestTypes),
-        customerName,
-        customerPhone,
-        customerEmail,
-        selectedCountry,
-        selectedRegion,
-        notes,
-        additionalServicesCost: additionalServicesCost.toString(),
-        totalAmount: totalAmount.toString()
+        bookingId: basket.id.toString()
       },
       allow_promotion_codes: true,
       billing_address_collection: 'required',
