@@ -36,7 +36,6 @@ export async function POST(request: Request) {
 
     const session = event.data.object as Stripe.Checkout.Session;
     const bookingId = session.metadata?.bookingId;
-    const originalBookingId = session.metadata?.originalBookingId;
 
     if (!bookingId) {
       return NextResponse.json(
@@ -45,46 +44,87 @@ export async function POST(request: Request) {
       );
     }
 
+    // Find the booking in the database
+    const { error: bookingError } = await supabase
+      .from('Basket')
+      .select('*')
+      .eq('external_id', bookingId)
+      .single();
+
+    if (bookingError) {
+      console.error('Error fetching booking:', bookingError);
+      throw bookingError;
+    }
+
     switch (event.type) {
       case 'checkout.session.completed':
-        // Update booking status to paid
+        // Update booking status to paid and store payment intent ID
         const { error: updateError } = await supabase
           .from('Basket')
           .update({
             isPaid: true,
+            paymentIntentId: session.payment_intent as string,
             updatedAt: new Date().toISOString()
           })
-          .eq('id', bookingId);
+          .eq('external_id', bookingId);
 
-        if (updateError) throw updateError;
-
-        // If this was a new booking (not a payment retry), cancel the original booking hold
-        if (originalBookingId) {
-          await fetch('/api/booking-hold', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              bookingId: originalBookingId, 
-              action: 'CANCEL' 
-            })
-          });
+        if (updateError) {
+          console.error('Error updating booking payment status:', updateError);
+          throw updateError;
         }
         break;
 
       case 'checkout.session.expired':
-        // Update booking status to cancelled
-        const { error: cancelError } = await supabase
+        // Update booking status to cancelled due to expiration
+        const { error: expireError } = await supabase
           .from('Basket')
           .update({
             isCancelled: true,
             updatedAt: new Date().toISOString()
           })
-          .eq('id', bookingId);
+          .eq('external_id', bookingId);
 
-        if (cancelError) throw cancelError;
+        if (expireError) {
+          console.error('Error updating booking expiration status:', expireError);
+          throw expireError;
+        }
         break;
 
-      // Add other event types as needed
+      case 'checkout.session.async_payment_failed':
+        // Handle failed payment (e.g., bank transfer failed)
+        const { error: failError } = await supabase
+          .from('Basket')
+          .update({
+            isCancelled: true,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('external_id', bookingId);
+
+        if (failError) {
+          console.error('Error updating booking failed payment status:', failError);
+          throw failError;
+        }
+        break;
+
+      case 'checkout.session.async_payment_succeeded':
+        // Handle successful async payment (e.g., bank transfer succeeded)
+        const { error: asyncSuccessError } = await supabase
+          .from('Basket')
+          .update({
+            isPaid: true,
+            paymentIntentId: session.payment_intent as string,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('external_id', bookingId);
+
+        if (asyncSuccessError) {
+          console.error('Error updating booking async payment status:', asyncSuccessError);
+          throw asyncSuccessError;
+        }
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
@@ -96,4 +136,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

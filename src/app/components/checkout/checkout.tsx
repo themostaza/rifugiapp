@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -124,6 +124,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
   
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [stripeCheckoutUrl, setStripeCheckoutUrl] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Fetch services on component mount
   useEffect(() => {
@@ -284,9 +285,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     }
   }, []);
 
-  // Modify handleProceedToPayment to store state in URL
+  // Modify handleProceedToPayment to include loading state
   const handleProceedToPayment = async () => {
     try {
+      setIsProcessingPayment(true);
       // Get the selected country object
       const selectedCountryObj = countries.find(c => c.code === selectedCountry);
       
@@ -343,6 +345,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     } catch (error) {
       console.error('Payment error:', error);
       alert('Si è verificato un errore durante il pagamento. Riprova più tardi.');
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -662,9 +666,16 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   <Button 
                     className="bg-gray-600 hover:bg-gray-700 text-white"
                     onClick={handleProceedToPayment}
-                    disabled={!formValid}
+                    disabled={!formValid || isProcessingPayment}
                   >
-                    Vai al pagamento
+                    {isProcessingPayment ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Elaborazione...
+                      </>
+                    ) : (
+                      'Vai al pagamento'
+                    )}
                   </Button>
                 </div>
               </div>

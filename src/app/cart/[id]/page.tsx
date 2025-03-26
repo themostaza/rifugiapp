@@ -79,18 +79,43 @@ export default function ConfirmationPage() {
 
   const handleCancelBooking = async () => {
     try {
-      const response = await fetch(`/api/booking-details?external_id=${bookingExternalId}`, {
-        method: 'POST'
-      })
+      const response = await fetch('/api/cancel-booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          external_id: bookingExternalId
+        })
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to cancel booking')
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel booking');
       }
+
+      const data = await response.json();
+      
       // Refresh booking data after cancellation
-      const updatedResponse = await fetch(`/api/booking-details?external_id=${bookingExternalId}`)
-      const updatedData = await updatedResponse.json()
-      setBookingData(updatedData)
+      const updatedResponse = await fetch(`/api/booking-details?external_id=${bookingExternalId}`);
+      const updatedData = await updatedResponse.json();
+      setBookingData(updatedData);
+
+      // Show success message with refund information
+      let message = 'La tua prenotazione è stata cancellata con successo.\n\n';
+      
+      if (data.refundAmount) {
+        message += `Riceverai un rimborso di €${data.refundAmount.toFixed(2)}.\n`;
+        message += 'Ti abbiamo inviato una email con i dettagli del rimborso.\n';
+      } else {
+        message += 'Non è previsto alcun rimborso secondo la nostra politica di cancellazione.\n';
+      }
+      
+      message += '\nTi abbiamo inviato una email di conferma con tutti i dettagli.';
+      
+      alert(message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel booking')
+      setError(err instanceof Error ? err.message : 'Failed to cancel booking');
     }
   }
 
@@ -100,6 +125,13 @@ export default function ConfirmationPage() {
       month: 'numeric',
       year: 'numeric'
     })
+  }
+
+  const isBeforeCheckIn = () => {
+    if (!bookingData) return false;
+    const currentDate = new Date();
+    const checkInDate = new Date(bookingData.checkIn);
+    return currentDate < checkInDate;
   }
 
   const handleDownloadPDF = () => {
@@ -135,7 +167,7 @@ export default function ConfirmationPage() {
                   <div class="value">${bookingData.id}</div>
                 </div>
                 <div>
-                  <div class="label">ID Pagamento Stripe</div>
+                  <div class="label">ID</div>
                   <div class="value">${bookingData.stripeId || 'N/A'}</div>
                 </div>
                 <div>
@@ -147,7 +179,7 @@ export default function ConfirmationPage() {
                   <div class="value">${formatDate(bookingData.checkOut)}</div>
                 </div>
                 <div>
-                  <div class="label">Totale pagato</div>
+                  <div class="label">Totale pagato (IVA inclusa)</div>
                   <div class="value">€${bookingData.totalPrice.toFixed(2)}</div>
                 </div>
                 <div>
@@ -267,7 +299,7 @@ export default function ConfirmationPage() {
                   <p className="font-medium break-all">{bookingData.id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">ID Stripe</p>
+                  <p className="text-sm text-gray-500">ID</p>
                   <p className="font-medium break-all">{bookingData.stripeId || 'N/A'}</p>
                 </div>
                 <div>
@@ -285,7 +317,7 @@ export default function ConfirmationPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Totale pagato</p>
+                  <p className="text-sm text-gray-500">Totale pagato (IVA inclusa)</p>
                   <p className="font-medium">€{bookingData.totalPrice.toFixed(2)}</p>
                 </div>
                 <div>
@@ -379,27 +411,29 @@ export default function ConfirmationPage() {
                     </Link>
                   </Button>
 
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="w-full sm:w-auto px-8">
-                        Elimina prenotazione
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="w-[90%] sm:w-full max-w-md mx-auto">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Davvero?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Questa azione non può essere annullata. La tua prenotazione verrà cancellata e riceverai un rimborso in base alle nostre politiche di rimborso.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annulla</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelBooking} className="bg-red-600 hover:bg-red-700">
-                          Conferma cancellazione
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {isBeforeCheckIn() && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="w-full sm:w-auto px-8">
+                          Elimina prenotazione
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="w-[90%] sm:w-full max-w-md mx-auto">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Davvero?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Questa azione non può essere annullata. La tua prenotazione verrà cancellata e riceverai un rimborso in base alle nostre politiche di rimborso.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleCancelBooking} className="bg-red-600 hover:bg-red-700">
+                            Conferma cancellazione
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </>
             )}
