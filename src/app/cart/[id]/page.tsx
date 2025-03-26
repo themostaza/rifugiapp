@@ -55,6 +55,8 @@ export default function ConfirmationPage() {
   const [bookingData, setBookingData] = useState<BookingData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showRefundDialog, setShowRefundDialog] = useState(false)
+  const [refundMessage, setRefundMessage] = useState('')
   const params = useParams()
   const bookingExternalId = params.id as string
 
@@ -101,7 +103,7 @@ export default function ConfirmationPage() {
       const updatedData = await updatedResponse.json();
       setBookingData(updatedData);
 
-      // Show success message with refund information
+      // Prepare refund message
       let message = 'La tua prenotazione è stata cancellata con successo.\n\n';
       
       if (data.refundAmount) {
@@ -113,7 +115,8 @@ export default function ConfirmationPage() {
       
       message += '\nTi abbiamo inviato una email di conferma con tutti i dettagli.';
       
-      alert(message);
+      setRefundMessage(message);
+      setShowRefundDialog(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to cancel booking');
     }
@@ -453,6 +456,23 @@ export default function ConfirmationPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Refund Information Dialog */}
+      <AlertDialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
+        <AlertDialogContent className="w-[90%] sm:w-full max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancellazione Completata</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {refundMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowRefundDialog(false)} className="bg-gray-900 hover:bg-gray-700">
+              Ho capito
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>
