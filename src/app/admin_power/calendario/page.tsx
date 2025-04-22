@@ -1,9 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, ReactElement } from 'react';
-import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, List, BarChart2 } from 'lucide-react';
 import BookingActions from './components/actionButtons';
 import DaySheet from './components/daySheet';
+import TimelineView from './components/timelineView';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Room {
   id: number;
@@ -17,8 +19,8 @@ interface Reservation {
   name: string;
   surname: string;
   guestCount: number;
-  guestName?: string; // Added this as it's used in renderReservations
-  checkIn: string; // Added these as they're used in code
+  guestName?: string;
+  checkIn: string;
   checkOut: string;
   rooms: Room[];
   RoomReservation: {
@@ -42,22 +44,16 @@ interface CalendarDay {
   isBlocked: boolean;
 }
 
-interface ReservationSegment {
-  startCol: number;
-  endCol: number;
-  week: number;
-}
-
-interface ProcessedReservation {
-  reservation: Reservation;
-  row: number;
-  segments: ReservationSegment[];
-}
-
 interface ApiResponse {
   reservations: Reservation[];
   calendarDays: CalendarDay[];
-  error?: string; // Added error property to fix the build error
+  error?: string;
+}
+
+interface DayData {
+  date: Date;
+  isBlocked: boolean;
+  reservationCount: number;
 }
 
 const ReservationCalendar: React.FC = () => {
@@ -68,6 +64,7 @@ const ReservationCalendar: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
 
   const fetchReservations = async (month: number, year: number): Promise<void> => {
     try {
@@ -106,129 +103,8 @@ const ReservationCalendar: React.FC = () => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
-  const getFirstDayOfMonth = (date: Date): number => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
-
   const refreshBlockedDays = async () => {
     await fetchReservations(currentDate.getMonth(), currentDate.getFullYear());
-  };
-
-  const processReservations = (): ProcessedReservation[] => {
-    if (!reservations.length) return [];
-
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDayOfMonth = getFirstDayOfMonth(currentDate);
-    const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
-
-    const sortedReservations = [...reservations]
-      .filter(r => r.checkIn && r.checkOut)
-      .sort((a, b) => {
-        const aStart = new Date(a.checkIn);
-        const bStart = new Date(b.checkIn);
-        if (aStart < monthStart && bStart < monthStart) {
-          return new Date(a.checkOut).getTime() - new Date(b.checkOut).getTime();
-        }
-        return aStart.getTime() - bStart.getTime();
-      });
-
-    const processedReservations: ProcessedReservation[] = [];
-    const occupiedPositions: { [key: string]: number } = {};
-
-    for (const reservation of sortedReservations) {
-      const checkIn = new Date(reservation.checkIn);
-      const checkOut = new Date(reservation.checkOut);
-
-      if (checkIn >= monthEnd || checkOut <= monthStart) continue;
-
-      const startDay = checkIn < monthStart ? 1 : checkIn.getDate();
-      const endDay = checkOut > monthEnd ? daysInMonth : checkOut.getDate() - 1;
-
-      const segments: ReservationSegment[] = [];
-      let currentDay = startDay;
-      
-      while (currentDay <= endDay) {
-        const absoluteIndex = firstDayOfMonth + currentDay - 1;
-        const currentWeek = Math.floor(absoluteIndex / 7);
-        const startCol = absoluteIndex % 7;
-        const daysLeftInWeek = 7 - startCol;
-        const daysLeftInReservation = endDay - currentDay + 1;
-        const segmentLength = Math.min(daysLeftInWeek, daysLeftInReservation);
-        
-        segments.push({
-          startCol,
-          endCol: startCol + segmentLength - 1,
-          week: currentWeek
-        });
-        
-        currentDay += segmentLength;
-      }
-
-      let row = 0;
-      let positionFound = false;
-      
-      while (!positionFound) {
-        positionFound = true;
-        for (const segment of segments) {
-          for (let col = segment.startCol; col <= segment.endCol; col++) {
-            const key = `${segment.week}-${col}`;
-            if (occupiedPositions[key] && occupiedPositions[key] > row) {
-              row = occupiedPositions[key];
-              positionFound = false;
-              break;
-            }
-          }
-          if (!positionFound) break;
-        }
-        row++;
-      }
-
-      segments.forEach(segment => {
-        for (let col = segment.startCol; col <= segment.endCol; col++) {
-          const key = `${segment.week}-${col}`;
-          occupiedPositions[key] = row;
-        }
-      });
-
-      processedReservations.push({
-        reservation,
-        row: row - 1,
-        segments
-      });
-    }
-
-    return processedReservations;
-  };
-
-  const renderReservations = (processedReservations: ProcessedReservation[], weekHeights: number[]):  ReactElement[] => {
-    return processedReservations.flatMap(({ reservation, row, segments }) =>
-      segments.map((segment, index) => {
-        const width = ((segment.endCol - segment.startCol + 1) * (100/7));
-        const left = (segment.startCol * (100/7));
-        const topOffset = weekHeights.slice(0, segment.week).reduce((sum, height) => sum + height, 0);
-        const top = topOffset + (row * 24) + 70; 
-
-        // Using name and surname if guestName is not available
-        const displayName = reservation.guestName || `${reservation.name} ${reservation.surname}`;
-
-        return (
-          <div
-            key={`${reservation.id}-${index}`}
-            className="absolute h-6 bg-gray-400 text-white text-[12px] rounded overflow-hidden whitespace-nowrap z-10 border-2 border-white"
-            style={{
-              top: `${top}px`,
-              left: `${left}%`,
-              width: `${width}%`,
-            }}
-          >
-            <div className="px-1 py-0.5 truncate">
-              {displayName} ({reservation.guestCount})
-            </div>
-          </div>
-        );
-      })
-    );
   };
 
   const months = [
@@ -244,106 +120,138 @@ const ReservationCalendar: React.FC = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   };
 
-  const renderCalendarGrid = (): ReactElement => {
+  const getDaysData = (): DayData[] => {
     const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate);
-    const processedReservations = processReservations();
-    const totalWeeks = Math.ceil((firstDay + daysInMonth) / 7);
+    const daysData: DayData[] = [];
     
-    const maxRowsByWeek = new Array(totalWeeks).fill(0);
-    processedReservations.forEach(({ row, segments }) => {
-      segments.forEach(segment => {
-        maxRowsByWeek[segment.week] = Math.max(maxRowsByWeek[segment.week], row + 1);
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      
+      // Check if day is blocked
+      const isBlocked = calendarDays.some(
+        calDay => new Date(calDay.date).getDate() === day && calDay.isBlocked
+      );
+      
+      // Count reservations for this day
+      const reservationCount = reservations.filter(res => {
+        const checkIn = new Date(res.checkIn);
+        const checkOut = new Date(res.checkOut);
+        return currentDay >= checkIn && currentDay < checkOut;
+      }).length;
+      
+      daysData.push({
+        date: currentDay,
+        isBlocked,
+        reservationCount
       });
-    });
+    }
     
-    const weekHeights = maxRowsByWeek.map(rows => {
-      const minHeight = 50;
-      const heightPerRow = 24;
-      const headerHeight = 28;
-      return Math.max(minHeight, headerHeight + (rows * heightPerRow));
-    });
-
+    return daysData;
+  };
+  
+  const renderDaysList = (): ReactElement => {
+    const daysData = getDaysData();
+    const fullDaysOfWeek = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    
     return (
-      <div className="relative">
-        <div className="grid grid-cols-7 gap-px">
-          {['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'].map(day => (
-            <div key={day} className="text-center p-2 bg-gray-100 font-semibold">
-              {day}
-            </div>
-          ))}
-
-          {Array.from({ length: totalWeeks * 7 }).map((_, index) => {
-            const dayNumber = index - firstDay + 1;
-            const isValidDay = dayNumber > 0 && dayNumber <= daysInMonth;
-            const weekIndex = Math.floor(index / 7);
-            const cellHeight = weekHeights[weekIndex];
-
-            // Check if the day is blocked
-            const dayDate = new Date(
-              currentDate.getFullYear(),
-              currentDate.getMonth(),
-              dayNumber
-            );
-            const isBlocked = calendarDays.some(
-              day => new Date(day.date).getDate() === dayNumber && day.isBlocked
-            );
-
+      <div className="bg-white rounded-md shadow overflow-hidden">
+        <div className="grid grid-cols-12 bg-gray-100 p-4 font-medium">
+          <div className="col-span-4">Giorno</div>
+          <div className="col-span-3">Status</div>
+          <div className="col-span-3">Prenotazioni</div>
+          <div className="col-span-2 text-center">Dettagli</div>
+        </div>
+        
+        <div className="divide-y divide-gray-100">
+          {daysData.map((day) => {
+            const dayOfWeek = fullDaysOfWeek[day.date.getDay()];
+            
             return (
-              <div
-                key={index}
-                className={`border border-gray-100 ${!isValidDay ? 'bg-gray-50' : ''} ${
-                  isValidDay && isBlocked ? 'bg-orange-100' : ''
-                }`}
-                style={{ height: `${cellHeight}px` }}
-              >
-                {isValidDay && (
-                    <div className="p-1 text-sm border-b bg-white flex items-center gap-1">
-                        <button
-                        onClick={() => {
-                            setSelectedDate(dayDate);
-                            setIsSheetOpen(true);
-                        }}
-                        className="hover:bg-gray-100 p-1 rounded"
-                        >
-                        {dayNumber}
-                        </button>
-                        {isBlocked && <Lock className="w-4 h-4 text-orange-500" />}
-                    </div>
-                    )}
+              <div key={day.date.toISOString()} className="grid grid-cols-12 p-4 hover:bg-gray-50 items-center">
+                <div className="col-span-4 flex items-center gap-3">
+                  <span className="text-2xl font-bold">{day.date.getDate()}</span>
+                  <span className="text-gray-600">{dayOfWeek}</span>
+                </div>
+                <div className="col-span-3 flex items-center">
+                  {day.isBlocked ? (
+                    <span className="flex items-center text-orange-500 gap-1">
+                      <Lock className="w-4 h-4" /> Bloccato
+                    </span>
+                  ) : (
+                    <span className="text-green-500">Disponibile</span>
+                  )}
+                </div>
+                <div className="col-span-3">
+                  {day.reservationCount > 0 ? (
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+                      {day.reservationCount} prenotazion{day.reservationCount === 1 ? 'e' : 'i'}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Nessuna</span>
+                  )}
+                </div>
+                <div className="col-span-2 text-center">
+                  <button
+                    onClick={() => {
+                      setSelectedDate(day.date);
+                      setIsSheetOpen(true);
+                    }}
+                    className="p-2 rounded-full hover:bg-blue-100 text-blue-600"
+                    title="Visualizza dettagli"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M12 16v-4"></path>
+                      <path d="M12 8h.01"></path>
+                    </svg>
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
-
-        {renderReservations(processedReservations, weekHeights)}
       </div>
     );
-    
   };
-
 
   return (
     <div className="max-w-6xl mx-auto p-4">
-        <BookingActions />
+      <BookingActions onActionCompleted={refreshBlockedDays} />
+      
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">
-          {months[currentDate.getMonth()]} {currentDate.getFullYear()}
-        </h2>
-        <div className="flex gap-2">
-          <button
-            onClick={previousMonth}
-            className="p-2 rounded hover:bg-gray-100"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={nextMonth}
-            className="p-2 rounded hover:bg-gray-100"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold">
+            {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </h2>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={previousMonth}
+              className="p-2 rounded hover:bg-gray-100"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={nextMonth}
+              className="p-2 rounded hover:bg-gray-100"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+        
+        <Tabs defaultValue="list" onValueChange={(value) => setViewMode(value as 'list' | 'timeline')}>
+          <TabsList>
+            <TabsTrigger value="list">
+              <List className="w-4 h-4 mr-2" />
+              Lista giorni
+            </TabsTrigger>
+            <TabsTrigger value="timeline">
+              <BarChart2 className="w-4 h-4 mr-2" />
+              Timeline
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {error && (
@@ -352,13 +260,34 @@ const ReservationCalendar: React.FC = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="h-96 flex items-center justify-center">
-          Loading...
-        </div>
-      ) : (
-        renderCalendarGrid()
-      )}
+      <div className="mb-4">
+        {viewMode === 'list' ? (
+          loading ? (
+            <div className="h-96 flex items-center justify-center">
+              Loading...
+            </div>
+          ) : (
+            renderDaysList()
+          )
+        ) : (
+          loading ? (
+            <div className="h-96 flex items-center justify-center">
+              Loading...
+            </div>
+          ) : (
+            <TimelineView 
+              currentDate={currentDate} 
+              reservations={reservations} 
+              calendarDays={calendarDays}
+              onSelectDate={(date) => {
+                setSelectedDate(date);
+                setIsSheetOpen(true);
+              }}
+            />
+          )
+        )}
+      </div>
+      
       {selectedDate && (
         <DaySheet
           isOpen={isSheetOpen}
@@ -368,22 +297,61 @@ const ReservationCalendar: React.FC = () => {
           }}
           date={selectedDate}
           reservations={reservations.filter(res => {
+            if (!selectedDate) return false;
+            
             const checkIn = new Date(res.dayFrom || res.checkIn);
             const checkOut = new Date(res.dayTo || res.checkOut);
-            const targetMonth = selectedDate.getMonth();
-            const targetYear = selectedDate.getFullYear();
             
-            return (
-              checkIn <= selectedDate &&
-              checkOut > selectedDate &&
-              checkIn.getMonth() === targetMonth &&
-              checkIn.getFullYear() === targetYear
+            // Normalizza la data selezionata ignorando l'ora
+            const normalizedSelectedDate = new Date(
+              selectedDate.getFullYear(),
+              selectedDate.getMonth(),
+              selectedDate.getDate()
             );
+            
+            // Normalizza anche le date di check-in e check-out
+            const normalizedCheckIn = new Date(
+              checkIn.getFullYear(),
+              checkIn.getMonth(),
+              checkIn.getDate()
+            );
+            
+            const normalizedCheckOut = new Date(
+              checkOut.getFullYear(),
+              checkOut.getMonth(),
+              checkOut.getDate()
+            );
+            
+            // La prenotazione è valida se il check-in è prima o uguale al giorno selezionato
+            // e il check-out è dopo il giorno selezionato
+            return (
+              normalizedCheckIn <= normalizedSelectedDate &&
+              normalizedCheckOut > normalizedSelectedDate
+            );
+          }).map(res => {
+            // Aggiungiamo un log per vedere i dati che stiamo passando a DaySheet
+            console.log(`[CALENDAR] Passing reservation #${res.id} to DaySheet:`, {
+              id: res.id,
+              name: res.name,
+              guestCount: res.guestCount,
+              checkIn: res.checkIn || res.dayFrom,
+              checkOut: res.checkOut || res.dayTo
+            });
+            return res;
           })}
           isBlocked={calendarDays.some(
-            day => 
-              new Date(day.date).getDate() === selectedDate.getDate() && 
-              day.isBlocked
+            day => {
+              if (!selectedDate) return false;
+              
+              const blockDate = new Date(day.date);
+              
+              return (
+                blockDate.getDate() === selectedDate.getDate() &&
+                blockDate.getMonth() === selectedDate.getMonth() &&
+                blockDate.getFullYear() === selectedDate.getFullYear() &&
+                day.isBlocked
+              );
+            }
           )}
           onDayBlockToggle={refreshBlockedDays}
         />

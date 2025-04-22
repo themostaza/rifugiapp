@@ -39,6 +39,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // Per prenotazioni create dall'admin, ignoriamo i controlli sul pagamento
+    // e non eseguiamo rimborsi
+    if (booking.isCreatedByAdmin) {
+      // Update booking status to cancelled
+      const { error: updateError } = await supabase
+        .from('Basket')
+        .update({
+          isCancelled: true,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('external_id', external_id);
+
+      if (updateError) {
+        console.error('Error updating booking status:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update booking status' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        isAdminBooking: true,
+        message: 'Prenotazione creata dall\'amministratore è stata cancellata.'
+      });
+    }
+
+    // Per prenotazioni normali, verifichiamo il pagamento
     if (!booking.isPaid || !booking.paymentIntentId) {
       return NextResponse.json(
         { error: 'Booking is not paid or missing payment information' },
@@ -46,6 +74,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Normal user bookings follow the refund policy
     // Convert dates to Italian timezone
     const now = new Date();
     const checkInDate = new Date(booking.dayFrom);
@@ -74,7 +103,7 @@ export async function POST(request: Request) {
     }
 
     // Process refund if applicable
-    if (refundAmount) {
+    if (refundAmount && booking.paymentIntentId) {
       try {
         await stripe.refunds.create({
           payment_intent: booking.paymentIntentId,

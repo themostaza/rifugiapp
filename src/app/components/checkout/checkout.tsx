@@ -57,6 +57,7 @@ interface CheckoutPageProps {
   countdown: number | null;
   onBackToRooms: () => void;
   onServicesChange: (totalServicesCost: number) => void;
+  isAdminBooking?: boolean;
 }
 
 interface Service {
@@ -95,7 +96,8 @@ const emailSchema = z.string().email({ message: "Email non valido" });
 const CheckoutPage: React.FC<CheckoutPageProps> = ({
   bookingDetails,
   onBackToRooms,
-  onServicesChange
+  onServicesChange,
+  isAdminBooking = false
 }) => {
   // States for services
   const [services, setServices] = useState<Service[]>([]);
@@ -355,6 +357,55 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     if (stripeCheckoutUrl) {
       window.open(stripeCheckoutUrl, '_blank', 'noopener,noreferrer');
       setShowPaymentDialog(false);
+    }
+  };
+
+  // Handle admin booking submission (skip payment)
+  const handleAdminBookingSubmit = async () => {
+    try {
+      setIsProcessingPayment(true);
+      // Get the selected country object
+      const selectedCountryObj = countries.find(c => c.code === selectedCountry);
+      
+      const response = await fetch('/api/create-admin-booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          checkIn: bookingDetails.checkIn,
+          checkOut: bookingDetails.checkOut,
+          pensionType: bookingDetails.pensionType,
+          rooms: bookingDetails.rooms,
+          assignedGuests: bookingDetails.assignedGuests,
+          roomPrivacyCosts: bookingDetails.roomPrivacyCosts,
+          guestTypes: bookingDetails.guestTypes,
+          customerName,
+          customerPhone,
+          customerEmail,
+          selectedCountry,
+          countryName: selectedCountryObj?.englishName || selectedCountryObj?.native || selectedCountry,
+          selectedRegion,
+          notes,
+          additionalServicesCost: totalServicesCost,
+          totalAmount: cartTotals.total
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create admin booking');
+      }
+
+      const { bookingId } = await response.json();
+      
+      // Redirect to confirmation page directly
+      window.location.href = `/cart/${bookingId}?payment_status=success&admin_booking=true`;
+      
+    } catch (error) {
+      console.error('Admin booking error:', error);
+      alert('Si è verificato un errore durante la creazione della prenotazione. Riprova più tardi.');
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -665,7 +716,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 <div className="flex justify-end">
                   <Button 
                     className="bg-gray-600 hover:bg-gray-700 text-white"
-                    onClick={handleProceedToPayment}
+                    onClick={isAdminBooking ? handleAdminBookingSubmit : handleProceedToPayment}
                     disabled={!formValid || isProcessingPayment}
                   >
                     {isProcessingPayment ? (
@@ -674,7 +725,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                         Elaborazione...
                       </>
                     ) : (
-                      'Vai al pagamento'
+                      isAdminBooking ? 'Conferma prenotazione' : 'Vai al pagamento'
                     )}
                   </Button>
                 </div>

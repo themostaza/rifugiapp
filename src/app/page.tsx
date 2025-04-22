@@ -301,6 +301,16 @@ export default function BookingPage() {
   const [currentBookingId, setCurrentBookingId] = useState<number | null>(null);
   const serviceWorkerRef = useRef<ServiceWorker | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isAdminBooking, setIsAdminBooking] = useState(false);
+
+  // Check for admin_booking parameter on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const isAdmin = params.has('admin_booking');
+      setIsAdminBooking(isAdmin);
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -876,6 +886,7 @@ export default function BookingPage() {
           countdown={countdown}
           onBackToRooms={handleBackToRooms}
           onServicesChange={setAdditionalServicesCost}
+          isAdminBooking={isAdminBooking}
         />
       )}
     </main>

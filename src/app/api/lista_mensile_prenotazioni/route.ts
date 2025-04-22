@@ -2,44 +2,27 @@ import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 import { CalendarDay } from '@/app/types';
 
-// Definizione dei tipi basati sulla struttura delle tabelle di Supabase
-interface RoomData {
-  id: number;
-  description: string;
-}
-
-interface RoomLinkBedData {
-  id: number;
-  name: string;
-  Room: RoomData;
-}
-
-interface RoomReservationSpecData {
-  id: number;
-  RoomLinkBed: RoomLinkBedData;
-}
-
-interface RoomReservationData {
-  id: number;
-  RoomReservationSpec: RoomReservationSpecData[];
-}
-
-interface BasketData {
-  id: number;
-  dayFrom: string;
-  dayTo: string;
-  name: string;
-  surname: string;
-  RoomReservation: RoomReservationData[];
-}
-
 // Interface per il risultato formattato
 interface FormattedReservation {
   id: number;
   checkIn: string;
   checkOut: string;
+  name: string;
+  surname: string;
   guestName: string;
   guestCount: number;
+  mail: string;
+  phone: string;
+  city: string;
+  region: string;
+  reservationType: string;
+  totalPrice: number;
+  isPaid: boolean;
+  note: string;
+  isCreatedByAdmin: boolean;
+  stripeId: string;
+  paymentIntentId: string;
+  external_id: string;
   rooms: {
     id: number;
     description: string;
@@ -82,20 +65,18 @@ export async function GET(request: Request) {
         dayTo,
         name,
         surname,
-        RoomReservation (
-          id,
-          RoomReservationSpec (
-            id,
-            RoomLinkBed (
-              id,
-              name,
-              Room (
-                id,
-                description
-              )
-            )
-          )
-        )
+        mail,
+        phone,
+        city,
+        region,
+        reservationType,
+        totalPrice,
+        isPaid,
+        note,
+        isCreatedByAdmin,
+        stripeId,
+        paymentIntentId,
+        external_id
       `)
       .gte('dayFrom', startDate.toISOString())
       .lte('dayFrom', endDate.toISOString())
@@ -115,6 +96,129 @@ export async function GET(request: Request) {
         { error: 'Database query failed', details: reservationsError },
         { status: 500 }
       );
+    }
+
+    // Per ogni prenotazione, recuperiamo separatamente le RoomReservation e RoomReservationSpec associate
+    const enhancedReservations = [];
+    
+    if (reservations && reservations.length > 0) {
+      console.log(`===== INIZIO ELABORAZIONE ${reservations.length} PRENOTAZIONI =====`);
+      
+      for (const reservation of reservations) {
+        console.log(`\n[BASKET #${reservation.id}] ${reservation.name} ${reservation.surname} - Elaborazione iniziata`);
+        console.log(`[BASKET #${reservation.id}] Date: ${new Date(reservation.dayFrom).toLocaleDateString()} -> ${new Date(reservation.dayTo).toLocaleDateString()}`);
+        
+        // Fase 1: Recupera le RoomReservation associate a questo Basket
+        const { data: roomReservations, error: roomResError } = await supabase
+          .from('RoomReservation')
+          .select('id, bedBlockPriceTotal, servicePriceTotal')
+          .eq('basketId', reservation.id);
+          
+        if (roomResError) {
+          console.error(`[BASKET #${reservation.id}] ERRORE nel recupero RoomReservation:`, roomResError);
+          continue;
+        }
+        
+        if (!roomReservations || roomReservations.length === 0) {
+          console.warn(`[BASKET #${reservation.id}] ATTENZIONE: Nessuna RoomReservation trovata per basketId=${reservation.id}`);
+          
+          // Aggiungiamo comunque la prenotazione con conteggio ospiti zero
+          enhancedReservations.push({
+            ...reservation,
+            guestCount: 0,
+            RoomReservation: []
+          });
+          
+          continue;
+        }
+        
+        console.log(`[BASKET #${reservation.id}] Trovate ${roomReservations.length} RoomReservation:`);
+        roomReservations.forEach(rr => {
+          console.log(`  - RoomReservation #${rr.id}: bedBlockPriceTotal=${rr.bedBlockPriceTotal}, servicePriceTotal=${rr.servicePriceTotal}`);
+        });
+        
+        const roomReservationWithSpecs = [];
+        let totalGuestCount = 0;
+        
+        // Fase 2: Per ogni RoomReservation, recupera le RoomReservationSpec associate
+        if (roomReservations && roomReservations.length > 0) {
+          for (const roomRes of roomReservations) {
+            console.log(`[BASKET #${reservation.id}] [ROOMRES #${roomRes.id}] Recupero RoomReservationSpec...`);
+            
+            const { data: roomResSpecs, error: specsError } = await supabase
+              .from('RoomReservationSpec')
+              .select(`
+                id, 
+                price,
+                roomLinkBedId,
+                RoomLinkBed (
+                  id,
+                  name,
+                  Room (
+                    id,
+                    description
+                  )
+                )
+              `)
+              .eq('roomReservationId', roomRes.id);
+              
+            if (specsError) {
+              console.error(`[BASKET #${reservation.id}] [ROOMRES #${roomRes.id}] ERRORE nel recupero RoomReservationSpec:`, specsError);
+              continue;
+            }
+            
+            if (!roomResSpecs || roomResSpecs.length === 0) {
+              console.warn(`[BASKET #${reservation.id}] [ROOMRES #${roomRes.id}] ATTENZIONE: Nessuna RoomReservationSpec trovata`);
+              continue;
+            }
+            
+            console.log(`[BASKET #${reservation.id}] [ROOMRES #${roomRes.id}] Trovate ${roomResSpecs.length} RoomReservationSpec:`);
+            roomResSpecs.forEach(spec => {
+              let bedName = 'Nome letto sconosciuto';
+              let roomDescription = 'Stanza sconosciuta';
+              
+              if (spec.RoomLinkBed && typeof spec.RoomLinkBed === 'object') {
+                if ('name' in spec.RoomLinkBed) {
+                  bedName = String(spec.RoomLinkBed.name);
+                }
+                
+                if ('Room' in spec.RoomLinkBed && 
+                    spec.RoomLinkBed.Room && 
+                    typeof spec.RoomLinkBed.Room === 'object' && 
+                    'description' in spec.RoomLinkBed.Room) {
+                  roomDescription = String(spec.RoomLinkBed.Room.description);
+                }
+              }
+              
+              console.log(`  - Spec #${spec.id}: Letto ${bedName} in ${roomDescription}, prezzo=${spec.price}`);
+            });
+            
+            // Aggiungi i dettagli a roomReservationWithSpecs
+            roomReservationWithSpecs.push({
+              id: roomRes.id,
+              bedBlockPriceTotal: roomRes.bedBlockPriceTotal,
+              servicePriceTotal: roomRes.servicePriceTotal,
+              RoomReservationSpec: roomResSpecs || []
+            });
+            
+            // Incrementa il conteggio degli ospiti
+            const currentResGuests = roomResSpecs?.length || 0;
+            totalGuestCount += currentResGuests;
+            console.log(`[BASKET #${reservation.id}] [ROOMRES #${roomRes.id}] Aggiunta di ${currentResGuests} ospiti al conteggio`);
+          }
+        }
+        
+        // Aggiungi le informazioni alla prenotazione
+        enhancedReservations.push({
+          ...reservation,
+          guestCount: totalGuestCount,
+          RoomReservation: roomReservationWithSpecs
+        });
+        
+        console.log(`[BASKET #${reservation.id}] RIASSUNTO: ${totalGuestCount} ospiti in ${roomReservationWithSpecs.length} RoomReservation`);
+      }
+      
+      console.log(`\n===== FINE ELABORAZIONE PRENOTAZIONI =====\n`);
     }
 
     // Fetch blocked days
@@ -158,37 +262,48 @@ export async function GET(request: Request) {
       });
     }
 
-    // Usiamo type assertion con unknown come intermediario per evitare errori di tipo
-    const typedReservations = reservations as unknown as BasketData[];
-    
-    // Transform the reservations data
-    const formattedReservations = typedReservations.map((reservation): FormattedReservation => {
+    // Transform the reservations data with our enhanced data that includes guest counts
+    const formattedReservations = enhancedReservations.map((reservation): FormattedReservation => {
       // Get unique rooms
       const uniqueRooms = new Set<{ id: number; description: string }>();
       
       reservation.RoomReservation?.forEach(roomRes => {
         roomRes.RoomReservationSpec?.forEach(spec => {
-          if (spec.RoomLinkBed?.Room) {
-            uniqueRooms.add({
-              id: spec.RoomLinkBed.Room.id,
-              description: spec.RoomLinkBed.Room.description
-            });
+          if (spec.RoomLinkBed && typeof spec.RoomLinkBed === 'object' && 'Room' in spec.RoomLinkBed) {
+            const room = spec.RoomLinkBed.Room;
+            if (room && typeof room === 'object' && 'id' in room && 'description' in room) {
+              uniqueRooms.add({
+                id: Number(room.id),
+                description: String(room.description)
+              });
+            }
           }
         });
       });
 
-      // Count guests (each RoomReservationSpec represents one guest)
-      const guestCount = reservation.RoomReservation?.reduce(
-        (acc, rr) => acc + (rr.RoomReservationSpec?.length || 0), 
-        0
-      ) || 0;
+      // Utilizziamo il guestCount già calcolato nella fase precedente
+      console.log(`[Reservation #${reservation.id}] ${reservation.name} ${reservation.surname} - Final guest count: ${reservation.guestCount}`);
 
       return {
         id: reservation.id,
         checkIn: reservation.dayFrom,
         checkOut: reservation.dayTo,
+        name: reservation.name,
+        surname: reservation.surname,
         guestName: `${reservation.name} ${reservation.surname}`.trim(),
-        guestCount,
+        guestCount: reservation.guestCount,
+        mail: reservation.mail,
+        phone: reservation.phone,
+        city: reservation.city,
+        region: reservation.region,
+        reservationType: reservation.reservationType,
+        totalPrice: reservation.totalPrice,
+        isPaid: reservation.isPaid,
+        note: reservation.note,
+        isCreatedByAdmin: reservation.isCreatedByAdmin,
+        stripeId: reservation.stripeId,
+        paymentIntentId: reservation.paymentIntentId,
+        external_id: reservation.external_id,
         rooms: Array.from(uniqueRooms)
       };
     });

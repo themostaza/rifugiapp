@@ -10,15 +10,29 @@ import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import { Bold, Italic, List, Link } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const ProfileSettings = () => {
   // Profile state
   const [profileData, setProfileData] = useState({
-    nome: '',
-    ruolo: '',
     email: '',
-    password: '••••••••••'
   });
+
+  // Password change state
+  const [passwordDialog, setPasswordDialog] = useState(false);
+  const [passwords, setPasswords] = useState({
+    new: '',
+    confirm: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Deposit percentage state
   const [depositPercentage, setDepositPercentage] = useState('30.00');
@@ -74,6 +88,17 @@ const ProfileSettings = () => {
   }, [editor]);
 
   useEffect(() => {
+    // Fetch current user data
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        setProfileData({
+          email: user.email || '',
+        });
+      }
+    };
+
     // Fetch deposit percentage from AppSettings
     const fetchDepositPercentage = async () => {
       const { data, error } = await supabase
@@ -101,9 +126,48 @@ const ProfileSettings = () => {
       }
     };
 
+    fetchUserProfile();
     fetchDepositPercentage();
     fetchEmailTemplate();
   }, [editor]);
+
+  // Handle password change
+  const handlePasswordChange = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+    setIsLoading(true);
+    
+    // Validate passwords
+    if (passwords.new !== passwords.confirm) {
+      setPasswordError('Le nuove password non coincidono');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (passwords.new.length < 6) {
+      setPasswordError('La password deve essere di almeno 6 caratteri');
+      setIsLoading(false);
+      return;
+    }
+
+    // Update password via Supabase Auth
+    const { error } = await supabase.auth.updateUser({
+      password: passwords.new
+    });
+
+    setIsLoading(false);
+
+    if (error) {
+      setPasswordError(error.message);
+    } else {
+      setPasswordSuccess('Password aggiornata con successo!');
+      setTimeout(() => {
+        setPasswordDialog(false);
+        setPasswords({ new: '', confirm: '' });
+        setPasswordSuccess('');
+      }, 2000);
+    }
+  };
 
   // Handle deposit percentage change
   const handleDepositChange = async (value: string) => {
@@ -131,6 +195,8 @@ const ProfileSettings = () => {
 
     if (error) {
       console.error('Error updating email template:', error);
+    } else {
+      alert('Template email salvato con successo!');
     }
   };
 
@@ -142,40 +208,26 @@ const ProfileSettings = () => {
         <div className="space-y-4">
           <div className="grid gap-4">
             <div>
-              <Label>Nome:</Label>
-              <Input 
-                value={profileData.nome} 
-                onChange={(e) => setProfileData({...profileData, nome: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label>Ruolo:</Label>
-              <Input 
-                value={profileData.ruolo} 
-                onChange={(e) => setProfileData({...profileData, ruolo: e.target.value})}
-              />
-            </div>
-            <div>
               <Label>Email:</Label>
               <Input 
                 type="email"
                 value={profileData.email} 
-                onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                disabled
               />
             </div>
             <div>
               <Label>Password:</Label>
               <Input 
                 type="password"
-                value={profileData.password}
+                value="••••••••••"
                 disabled
               />
               <div className='flex justify-end items-end mt-2 '>
               <Button 
                 variant="outline" 
-                className=''
+                onClick={() => setPasswordDialog(true)}
                 >
-                modifica password
+                Modifica password
                 </Button>
                 </div>
             </div>
@@ -267,6 +319,49 @@ const ProfileSettings = () => {
           </div>
         </div>
       </Card>
+
+      {/* Password Change Dialog */}
+      <Dialog open={passwordDialog} onOpenChange={setPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nuova password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={passwords.new}
+                onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Conferma nuova password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={passwords.confirm}
+                onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+              />
+            </div>
+            {passwordError && (
+              <div className="text-red-500 text-sm">{passwordError}</div>
+            )}
+            {passwordSuccess && (
+              <div className="text-green-500 text-sm">{passwordSuccess}</div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialog(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handlePasswordChange} disabled={isLoading}>
+              {isLoading ? "Salvando..." : "Salva"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

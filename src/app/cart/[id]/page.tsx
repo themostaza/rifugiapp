@@ -21,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { supabase } from '@/lib/supabase'
 
 interface BookingData {
   id: number;
@@ -37,6 +38,7 @@ interface BookingData {
   isCancelled: boolean;
   createdAt: string;
   stripeId: string;
+  isCreatedByAdmin: boolean;
   rooms: {
     id: number;
     beds: {
@@ -57,8 +59,19 @@ export default function ConfirmationPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [refundMessage, setRefundMessage] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
   const params = useParams()
   const bookingExternalId = params.id as string
+
+  // Check if current user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setIsAdmin(!!session)
+    }
+    
+    checkAdminStatus()
+  }, [])
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -103,20 +116,23 @@ export default function ConfirmationPage() {
       const updatedData = await updatedResponse.json();
       setBookingData(updatedData);
 
-      // Prepare refund message
-      let message = 'La tua prenotazione è stata cancellata con successo.\n\n';
-      
-      if (data.refundAmount) {
-        message += `Riceverai un rimborso di €${data.refundAmount.toFixed(2)}.\n`;
-        message += 'Ti abbiamo inviato una email con i dettagli del rimborso.\n';
-      } else {
-        message += 'Non è previsto alcun rimborso secondo la nostra politica di cancellazione.\n';
+      // Solo per le prenotazioni normali (non admin) mostriamo il popup di conferma
+      if (!data.isAdminBooking) {
+        // Prepare refund message
+        let message = 'La prenotazione è stata cancellata con successo.\n\n';
+        
+        if (data.refundAmount) {
+          message += `Riceverai un rimborso di €${data.refundAmount.toFixed(2)}.\n`;
+          message += 'Ti abbiamo inviato una email con i dettagli del rimborso.\n';
+        } else {
+          message += 'Non è previsto alcun rimborso secondo la nostra politica di cancellazione.\n';
+        }
+        
+        message += '\nTi abbiamo inviato una email di conferma con tutti i dettagli.';
+        
+        setRefundMessage(message);
+        setShowRefundDialog(true);
       }
-      
-      message += '\nTi abbiamo inviato una email di conferma con tutti i dettagli.';
-      
-      setRefundMessage(message);
-      setShowRefundDialog(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to cancel booking');
     }
@@ -414,7 +430,9 @@ export default function ConfirmationPage() {
                     </Link>
                   </Button>
 
-                  {isBeforeCheckIn() && (
+                  {/* Mostra il pulsante di cancellazione per tutte le prenotazioni non cancellate, 
+                      indipendentemente dal fatto che siano create dall'admin o meno */}
+                  {isBeforeCheckIn() || isAdmin || bookingData.isCreatedByAdmin ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" className="w-full sm:w-auto px-8">
@@ -423,9 +441,11 @@ export default function ConfirmationPage() {
                       </AlertDialogTrigger>
                       <AlertDialogContent className="w-[90%] sm:w-full max-w-md mx-auto">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Davvero?</AlertDialogTitle>
+                          <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Questa azione non può essere annullata. La tua prenotazione verrà cancellata e riceverai un rimborso in base alle nostre politiche di rimborso.
+                            {bookingData.isCreatedByAdmin 
+                              ? 'Questa prenotazione è stata creata dall\'amministratore. La cancellazione non comporterà rimborsi.'
+                              : 'Questa azione non può essere annullata. La tua prenotazione verrà cancellata e riceverai un rimborso in base alle nostre politiche di rimborso.'}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -436,7 +456,7 @@ export default function ConfirmationPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  )}
+                  ) : null}
                 </div>
               </>
             )}

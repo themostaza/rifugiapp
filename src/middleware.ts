@@ -13,14 +13,15 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
   
-  // Check if the request is for an admin route
+  // Check if the request is for an admin route or contains admin_booking parameter
   const isAdminRoute = req.nextUrl.pathname.startsWith('/admin_power')
+  const hasAdminBookingParam = req.nextUrl.searchParams.has('admin_booking')
   
   // If trying to access admin route without authentication, redirect to login
-  if (isAdminRoute && !session) {
+  if ((isAdminRoute || hasAdminBookingParam) && !session) {
     const redirectUrl = new URL('/login', req.url)
     // Add original URL as a query parameter to redirect after login
-    redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname)
+    redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname + req.nextUrl.search)
     return NextResponse.redirect(redirectUrl)
   }
   
@@ -32,5 +33,6 @@ export const config = {
   matcher: [
     '/admin_power/:path*',
     '/login',
+    '/',  // Add root path to check for admin_booking parameter
   ],
 } 
