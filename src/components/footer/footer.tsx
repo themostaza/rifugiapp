@@ -58,7 +58,7 @@ const Footer: React.FC<FooterProps> = ({
           </div>
           <div>
             <a 
-              href="/admin_power/calendario" 
+              href="/login" 
               className="text-sm text-gray-600 hover:text-gray-900"
               target="_blank"
               rel="noopener noreferrer"
