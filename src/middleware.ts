@@ -33,6 +33,7 @@ export const config = {
   matcher: [
     '/admin_power/:path*',
     '/login',
-    '/',  // Add root path to check for admin_booking parameter
+    '/', 
+    '/admin/x7k9m2p4v3'
   ],
 } 

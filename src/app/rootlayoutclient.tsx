@@ -20,7 +20,8 @@ export default function RootLayoutClient({
     '/auth/reset-password',
     '/about',
     '/pricing',
-    '/cart/'
+    '/cart/',
+    '/admin/x7k9m2p4v3'
   ]
   
   // Verifica se la pagina corrente è nella lista delle pagine escluse
