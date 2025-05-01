@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit, X, PlusCircle, Bed } from 'lucide-react';
+import { Plus, Trash2, Edit, X, PlusCircle, Bed, Image as ImageIcon } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,15 @@ import { TabsContent } from "@/components/ui/tabs";
 import { Room, EntityType, LanguageTranslation, Language, RoomLinkBed, Bed as BedType } from '@/app/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/lib/supabase';
+
+// Define RoomImage type
+interface RoomImage {
+  id: number;
+  url: string;
+  roomId: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 interface RoomProps {
   rooms: Room[];
@@ -59,6 +68,13 @@ const RoomManagement: React.FC<RoomProps> = ({
   const [bedLangTrasn, setBedLangTrasn] = useState<LanguageTranslation[]>([{}]);
   const [editBedMode, setEditBedMode] = useState(false);
   const [currentBedForEdit, setCurrentBedForEdit] = useState<RoomLinkBed | null>(null);
+
+  // State for image management
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [currentRoomForImages, setCurrentRoomForImages] = useState<Room | null>(null);
+  const [roomImages, setRoomImages] = useState<RoomImage[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Funzione di utility per verificare se langTrasn è valido
   const hasValidTranslations = (langTrasn: LanguageTranslation[] | null | undefined): boolean => {
@@ -320,6 +336,109 @@ const RoomManagement: React.FC<RoomProps> = ({
     setNewLanguage(''); // Reset della selezione
   };
 
+  // Functions for image management
+  const fetchRoomImages = async (roomId: number) => {
+    setIsLoadingImages(true);
+    try {
+      const { data, error } = await supabase
+        .from('RoomImage')
+        .select('*')
+        .eq('roomId', roomId)
+        .order('createdAt', { ascending: false });
+      
+      if (error) throw error;
+      setRoomImages(data || []);
+    } catch (error) {
+      console.error('Error fetching room images:', error);
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+
+  const handleDeleteImage = async (id: number, url: string) => {
+    if (!confirm('Are you sure you want to delete this image?')) return;
+    
+    try {
+      // First delete from storage
+      const path = url.split('/').pop(); // Extract filename from URL
+      if (path) {
+        const { error: storageError } = await supabase.storage
+          .from('roomimage')
+          .remove([path]);
+        
+        if (storageError) console.error('Error deleting from storage:', storageError);
+      }
+      
+      // Then delete from database
+      const { error } = await supabase
+        .from('RoomImage')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Refresh image list
+      if (currentRoomForImages) {
+        await fetchRoomImages(currentRoomForImages.id);
+      }
+    } catch (error) {
+      console.error('Error deleting image:', error);
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0 || !currentRoomForImages) return;
+
+    setUploadingImage(true);
+    
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Create a unique filename
+        const timestamp = new Date().getTime();
+        const fileExt = file.name.split('.').pop();
+        const fileName = `room_${currentRoomForImages.id}_${timestamp}.${fileExt}`;
+        
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('roomimage')
+          .upload(fileName, file);
+        
+        if (uploadError) throw uploadError;
+        
+        // Get the public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('roomimage')
+          .getPublicUrl(fileName);
+        
+        if (!publicUrlData || !publicUrlData.publicUrl) {
+          throw new Error('Failed to get public URL');
+        }
+        
+        // Add to RoomImage table
+        const { error: dbError } = await supabase
+          .from('RoomImage')
+          .insert([{
+            url: publicUrlData.publicUrl,
+            roomId: currentRoomForImages.id
+          }]);
+        
+        if (dbError) throw dbError;
+      }
+      
+      // Refresh image list
+      await fetchRoomImages(currentRoomForImages.id);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    } finally {
+      setUploadingImage(false);
+      // Clear input
+      if (event.target) event.target.value = '';
+    }
+  };
+
   // Load beds when dialog opens
   useEffect(() => {
     if (showBedDialog && currentRoomForBeds) {
@@ -327,6 +446,13 @@ const RoomManagement: React.FC<RoomProps> = ({
       fetchAvailableBeds();
     }
   }, [showBedDialog, currentRoomForBeds]);
+
+  // Load images when dialog opens
+  useEffect(() => {
+    if (showImageDialog && currentRoomForImages) {
+      fetchRoomImages(currentRoomForImages.id);
+    }
+  }, [showImageDialog, currentRoomForImages]);
 
   return (
     <TabsContent value="rooms">
@@ -366,6 +492,16 @@ const RoomManagement: React.FC<RoomProps> = ({
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setCurrentRoomForImages(room);
+                        setShowImageDialog(true);
+                      }}
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -806,6 +942,75 @@ const RoomManagement: React.FC<RoomProps> = ({
                 {editBedMode ? 'Aggiorna' : 'Salva'}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Dialog for image management */}
+        <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto min-w-[60vw] md:min-w-[60vw]">
+            <DialogHeader>
+              <DialogTitle>Gestione immagini</DialogTitle>
+            </DialogHeader>
+            
+            <div className="mt-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">
+                  Immagini della stanza {currentRoomForImages && `(${currentRoomForImages.description})`}
+                </h3>
+                <div>
+                  <label htmlFor="image-upload" className={`cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <Plus className="mr-2 h-4 w-4" /> Aggiungi immagine
+                    <input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                  </label>
+                </div>
+              </div>
+              
+              {isLoadingImages ? (
+                <div className="text-center py-8">Caricamento immagini...</div>
+              ) : roomImages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nessuna immagine disponibile per questa stanza
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {roomImages.map((image) => (
+                    <div key={image.id} className="relative group border rounded-lg overflow-hidden">
+                      {/* Image preview */}
+                      <div className="aspect-video bg-gray-100 relative">
+                        <img 
+                          src={image.url} 
+                          alt={`Room image ${image.id}`}
+                          className="object-cover w-full h-full"
+                        />
+                        
+                        {/* Delete button overlay */}
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleDeleteImage(image.id, image.url)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      {/* Image URL */}
+                      <div className="p-2 text-xs truncate text-muted-foreground">
+                        {image.url.split('/').pop()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </Card>
