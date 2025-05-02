@@ -36,6 +36,7 @@ interface BedBlockingProps {
   onPrivacyCostChange: (roomId: number, cost: number) => void;
   checkIn?: Date;
   checkOut?: Date;
+  onBlockedBedsChange: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
 }
 
 interface BedBlockPricing {
@@ -50,7 +51,8 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
   selectedGuests,
   onPrivacyCostChange,
   checkIn,
-  checkOut
+  checkOut,
+  onBlockedBedsChange
 }) => {
   const [blockedBeds, setBlockedBeds] = useState<{[date: string]: number[]}>({});
   const [pricingData, setPricingData] = useState<BedBlockPricing[]>([]);
@@ -178,13 +180,13 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
     );
   }, [blockedBeds, pricingData]);
 
-  // Update parent component with privacy cost
+  // Update parent component with privacy cost and detailed blocked beds
   useEffect(() => {
     const cost = calculateTotalPrivacyCost();
     onPrivacyCostChange(roomId, cost);
-    //console.log(cost)
-}, [blockedBeds, roomId]);
-
+    // Chiama il nuovo callback con i dati dettagliati
+    onBlockedBedsChange(roomId, blockedBeds);
+  }, [blockedBeds, roomId, onPrivacyCostChange, calculateTotalPrivacyCost, onBlockedBedsChange]);
 
   // Format date for display (e.g., "26/06")
   const formatDate = (dateStr: string) => {

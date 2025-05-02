@@ -66,7 +66,10 @@ const CartItem = ({
     </div>
     <div className="flex items-center gap-2">
       <div className="text-right">
-        <span className="font-medium">€{typeof price === 'number' ? price.toFixed(2) : price}</span>
+        {/* Conditionally render price and currency symbol */}
+        {price !== '' && (
+          <span className="font-medium">€{typeof price === 'number' ? price.toFixed(2) : price}</span>
+        )}
         
         {discount > 0 && originalPrice && (
           <div className="text-sm text-green-600">
@@ -90,7 +93,7 @@ const Cart: React.FC<CartProps> = ({
   countdown, 
   bookingDetails, 
   guestTypes, 
-  onProceedToCheckout,
+  // onProceedToCheckout,
   onTimeUp 
 }) => {
   const router = useRouter();
@@ -260,15 +263,6 @@ const Cart: React.FC<CartProps> = ({
                 <span>€{total.toFixed(2)}</span>
               </div>
             </CardContent>
-
-            <div className="fixed bottom-0 right-0 w-full max-w-md bg-white border-t p-4">
-              <Button 
-                className="w-full bg-gray-600 hover:bg-gray-700"
-                onClick={onProceedToCheckout}
-              >
-                Prosegui l&apos;acquisto
-              </Button>
-            </div>
           </Card>
         </div>
       </div>

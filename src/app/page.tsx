@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Calendar, ChevronDown, Users, Plus, Minus, Search, ShoppingCart, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -21,6 +21,7 @@ import {
   formatRoomForCart
 } from '@/app/utils/pricing';
 import CheckoutPage from './components/checkout/checkout'
+import { formatDateForAPI } from '@/app/utils/dateUtils'; // Import from new location
 
 
 // Types
@@ -124,6 +125,7 @@ interface RoomListProps {
     cityTaxPrice: number;
   }>;
   onProceedToCheckout: () => void;
+  onBlockedBedsChange: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
 }
 
 const RoomList: React.FC<RoomListProps> = ({ 
@@ -138,7 +140,8 @@ const RoomList: React.FC<RoomListProps> = ({
   availabilityByNight,
   guestTypes,
   onPrivacyCostChange,
-  onProceedToCheckout 
+  onProceedToCheckout,
+  onBlockedBedsChange
 }) => {
   
 
@@ -199,7 +202,7 @@ const RoomList: React.FC<RoomListProps> = ({
               <div className="flex items-center w-full min-h-[48px] hover:bg-gray-100">
                 <AccordionTrigger className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full px-2 sm:px-4 py-2 sm:py-0">
                   <div className="flex items-center gap-2 sm:gap-4">
-                    <h3 className="text-base sm:text-lg font-semibold">
+                    <h3 className="text-base sm:text-lg font-semibold mr-2">
                       {room.description}
                     </h3>
                   </div>
@@ -248,6 +251,7 @@ const RoomList: React.FC<RoomListProps> = ({
                 checkOut={checkOut}
                 guestTypes={guestTypes}
                 onPrivacyCostChange={onPrivacyCostChange}
+                onBlockedBedsChange={onBlockedBedsChange}
               />
               </AccordionContent>
             </AccordionItem>
@@ -298,10 +302,22 @@ export default function BookingPage() {
   const [roomPrivacyCosts, setRoomPrivacyCosts] = useState<{ [roomId: number]: number }>({});
   const [currentView, setCurrentView] = useState<'search' | 'checkout'>('search')
   const [additionalServicesCost, setAdditionalServicesCost] = useState(0);
+  // Stato per memorizzare i dati dettagliati dei letti bloccati (spostato qui)
+  const [allBlockedBeds, setAllBlockedBeds] = useState<{ [roomId: number]: { [date: string]: number[] } }>({});
   const [currentBookingId, setCurrentBookingId] = useState<number | null>(null);
   const serviceWorkerRef = useRef<ServiceWorker | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdminBooking, setIsAdminBooking] = useState(false);
+
+  
+  // Handler per ricevere i dati dettagliati dei letti bloccati da RoomContent
+  const handleBlockedBedsChange = useCallback((roomId: number, blockedBedsData: { [date: string]: number[] }) => {
+    setAllBlockedBeds(prev => ({
+      ...prev,
+      [roomId]: blockedBedsData
+    }));
+    // console.log("Updated allBlockedBeds:", { ...allBlockedBeds, [roomId]: blockedBedsData });
+  }, []);
 
   // Check for admin_booking parameter on component mount
   useEffect(() => {
@@ -340,27 +356,6 @@ export default function BookingPage() {
       }
     }
   }
-
-  // Utility function to format date for API calls
-  const formatDateForAPI = (date: Date | undefined): string | undefined => {
-    if (!date) return undefined;
-    
-    // Generazione robusta della data in formato YYYY-MM-DD per il database
-    // Mantiene la rappresentazione del calendario locale (giorno effettivo selezionato dall'utente)
-    const localYear = date.getFullYear();
-    const localMonth = date.getMonth() + 1; // getMonth() è 0-indexed
-    const localDay = date.getDate();
-    
-    // Assicurati che mese e giorno abbiano sempre due cifre
-    const formattedMonth = String(localMonth).padStart(2, '0');
-    const formattedDay = String(localDay).padStart(2, '0');
-    
-    // Crea la stringa nel formato YYYY-MM-DD
-    const formattedDate = `${localYear}-${formattedMonth}-${formattedDay}`;
-    
-    console.log(`📅 Formato data: data selezionata=${date.toDateString()}, formattata come YYYY-MM-DD="${formattedDate}"`);
-    return formattedDate;
-  };
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -553,13 +548,13 @@ export default function BookingPage() {
     console.log('Selected room:', roomId)
   }
 
-  // Handle privacy cost changes
-  const handlePrivacyCostChange = (roomId: number, cost: number) => {
+  // Handle privacy cost changes (Aggiungo useCallback)
+  const handlePrivacyCostChange = useCallback((roomId: number, cost: number) => {
     setRoomPrivacyCosts(prev => ({
       ...prev,
       [roomId]: cost
     }));
-  };
+  }, []); // <-- Dependency array vuoto
 
   // Handle getting to checkout page
   const handleProceedToCheckout = async () => {
@@ -897,6 +892,7 @@ export default function BookingPage() {
                 guestTypes={guestTypes}
                 onPrivacyCostChange={handlePrivacyCostChange}
                 onProceedToCheckout={handleProceedToCheckout}
+                onBlockedBedsChange={handleBlockedBedsChange}
               />
             </Card>
           )}
@@ -911,7 +907,8 @@ export default function BookingPage() {
             rooms,
             assignedGuests,
             roomPrivacyCosts,
-            guestTypes
+            guestTypes,
+            detailedBlockedBeds: allBlockedBeds
           }}
           language={language}
           onLanguageChange={setLanguage}

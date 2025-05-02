@@ -324,9 +324,11 @@ async function checkBedAvailability(params: SearchParams) {
         )
       )
     `)
-    .gte('dayTo', params.checkIn)
-    .lte('dayFrom', params.checkOut)   
-    .eq('isPaid', true)
+    // Corrected temporal overlap condition: dayFrom < checkOut AND checkIn < dayTo
+    .lt('dayFrom', params.checkOut)   
+    .gt('dayTo', params.checkIn)     
+    // Include paid OR admin-created reservations that are not cancelled
+    .or('isPaid.eq.true,isCreatedByAdmin.eq.true') 
     .eq('isCancelled', false);
 
   if (reservationsError) {
@@ -336,6 +338,9 @@ async function checkBedAvailability(params: SearchParams) {
 
   // Cast to our typed structure
   const existingReservations = rawReservations as unknown as Reservation[];
+
+  // LOG: Selected Basket IDs
+  console.log('🛒 Relevant Basket IDs found:', existingReservations?.map(r => r.id) || []);
 
   // Calculate occupied beds for each day
   const occupiedBedsByDay = new Map<string, Set<number>>();
@@ -360,6 +365,8 @@ async function checkBedAvailability(params: SearchParams) {
         // Add specifically reserved beds
         roomRes.RoomReservationSpec?.forEach(spec => {
           if (spec.roomLinkBedId) {
+            // LOG: Booked bed from RoomReservationSpec
+            console.log(`  🛌 Bed booked via Spec ID ${spec.id}: roomLinkBedId=${spec.roomLinkBedId} for date ${dateStr}`);
             occupiedBedsByDay.get(dateStr)?.add(spec.roomLinkBedId);
           }
         });
@@ -367,6 +374,8 @@ async function checkBedAvailability(params: SearchParams) {
         // Add blocked beds
         roomRes.ReservationLinkBedBlock?.forEach(block => {
           if (block.day === dateStr && Array.isArray(block.roomLinkBedId)) {
+            // LOG: Blocked beds from ReservationLinkBedBlock
+            console.log(`  🚫 Beds blocked via Block ID ${block.id} for date ${block.day}: roomLinkBedIds=[${block.roomLinkBedId.join(', ')}]`);
             block.roomLinkBedId.forEach(bedId => {
               occupiedBedsByDay.get(dateStr)?.add(bedId);
             });
@@ -396,6 +405,9 @@ async function checkBedAvailability(params: SearchParams) {
       return !occupiedBedsForDay.has(bed.id);
     });
   }) || [];
+
+  // LOG: Final Available Bed IDs
+  console.log('✅ Available beds for the entire stay (IDs):', availableBeds.map(b => b.id));
 
   console.log(`📅 Found ${availableBeds.length} beds available for all dates in range ${params.checkIn} to ${params.checkOut}`);
 

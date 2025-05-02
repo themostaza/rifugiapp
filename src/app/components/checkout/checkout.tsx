@@ -1,24 +1,19 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Info } from 'lucide-react';
 import { calculateCartTotal } from '@/app/utils/pricing';
 import { Room } from '@/app/utils/pricing';
 import { loadStripe } from '@stripe/stripe-js';
+import { formatDateForAPI } from '@/app/utils/dateUtils';
 
-import { z } from 'zod';
-
-// Types
 interface Bed {
   id: number;
   name: string;
@@ -51,6 +46,7 @@ interface CheckoutPageProps {
       cityTax: boolean;
       cityTaxPrice: number;
     }>;
+    detailedBlockedBeds: { [roomId: number]: { [date: string]: number[] } };
   };
   language: string;
   onLanguageChange: (lang: string) => void;
@@ -78,52 +74,29 @@ interface SelectedService {
   totalPrice: number;
 }
 
-interface Region {
-  id: number;
-  name: string;
-}
-
-interface Country {
-  name: string;
-  code: string;
-  native: string;
-  englishName?: string;
-}
-
-// Email validation schema
-const emailSchema = z.string().email({ message: "Email non valido" });
+// Import new components
+import NotesSection from './NotesSection';
+import ContactInfoSection, { ContactDetails } from './ContactInfoSection';
 
 const CheckoutPage: React.FC<CheckoutPageProps> = ({
   bookingDetails,
   onBackToRooms,
   onServicesChange,
-  isAdminBooking = false
+  isAdminBooking = false,
 }) => {
   // States for services
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
   
-  // States for booking contact information
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [countriesLoading, setCountriesLoading] = useState(true);
+  // States for final notes and contact details
+  const [finalNotes, setFinalNotes] = useState('');
+  const [contactDetails, setContactDetails] = useState<ContactDetails | null>(null);
   
-  // States for Italian regions (shown only when Italy is selected)
-  const [selectedRegion, setSelectedRegion] = useState<string>('');
-  const [italianRegions, setItalianRegions] = useState<Region[]>([]);
-  const [regionsLoading, setRegionsLoading] = useState(false);
-  
-  // State for additional notes
-  const [notes, setNotes] = useState('');
-  
-  // State for form validation
+  // State for overall form validity
   const [formValid, setFormValid] = useState(false);
   
+  // Payment related states
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [stripeCheckoutUrl, setStripeCheckoutUrl] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -131,6 +104,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
   // Fetch services on component mount
   useEffect(() => {
     const fetchServices = async () => {
+      setServicesLoading(true); // Set loading true at the start
       try {
         const response = await fetch('/api/services');
         if (!response.ok) {
@@ -148,128 +122,72 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     fetchServices();
   }, []);
 
-  // Fetch countries on component mount
+  // Update overall form validity based on contact details from child component
   useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const response = await fetch('/api/countries');
-        if (!response.ok) {
-          throw new Error('Failed to fetch countries');
-        }
-        const data = await response.json();
-        setCountries(data);
-      } catch (error) {
-        console.error('Error fetching countries:', error);
-      } finally {
-        setCountriesLoading(false);
+    setFormValid(contactDetails?.isValid || false);
+  }, [contactDetails]);
+
+  // Calculate total services cost (memoized)
+  const totalServicesCost = useMemo(() => {
+    return selectedServices.reduce((total, service) => total + service.totalPrice, 0);
+  }, [selectedServices]);
+  
+  // Effect to notify parent about service cost changes
+  useEffect(() => {
+    onServicesChange(totalServicesCost);
+  }, [totalServicesCost, onServicesChange]); // Depend on memoized value
+
+  // Memoized handlers
+  const handleServiceChange = useCallback((service: Service, checked: boolean, quantity: number = 1) => {
+    setSelectedServices(prev => {
+      if (checked) {
+        return [...prev, {
+          id: service.id,
+          description: service.description,
+          price: service.price,
+          quantity,
+          totalPrice: service.price * quantity
+        }];
+      } else {
+        return prev.filter(item => item.id !== service.id);
       }
-    };
+    });
+  }, []); // Empty dependency array if it doesn't depend on component state/props outside the function scope
 
-    fetchCountries();
-  }, []);
-
-  // Fetch Italian regions when Italy is selected
-  useEffect(() => {
-    if (selectedCountry === 'IT') {
-      const fetchItalianRegions = async () => {
-        setRegionsLoading(true);
-        try {
-          const response = await fetch('/api/italyregions');
-          if (!response.ok) {
-            throw new Error('Failed to fetch Italian regions');
-          }
-          const data = await response.json();
-          setItalianRegions(data);
-        } catch (error) {
-          console.error('Error fetching Italian regions:', error);
-        } finally {
-          setRegionsLoading(false);
-        }
-      };
-
-      fetchItalianRegions();
-    } else {
-      setSelectedRegion('');
-    }
-  }, [selectedCountry]);
-
-  // Validate form on input changes
-  useEffect(() => {
-    const isValid = 
-      customerName.trim() !== '' && 
-      customerPhone.trim() !== '' && 
-      customerEmail.trim() !== '' && 
-      emailError === null &&
-      selectedCountry !== '' &&
-      (selectedCountry !== 'IT' || selectedRegion !== '');
-    
-    setFormValid(isValid);
-  }, [customerName, customerPhone, customerEmail, emailError, selectedCountry, selectedRegion]);
-
-  // Handle email validation
-  const validateEmail = (email: string) => {
-    try {
-      emailSchema.parse(email);
-      setEmailError(null);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setEmailError(error.errors[0].message);
-      }
-    }
-  };
-
-  // Add useEffect to handle service changes
-  useEffect(() => {
-    onServicesChange(calculateServicesCost());
-  }, [selectedServices, onServicesChange]);
-
-  // Update handleServiceChange to not call onServicesChange directly
-  const handleServiceChange = (service: Service, checked: boolean, quantity: number = 1) => {
-    if (checked) {
-      setSelectedServices(prev => [...prev, {
-        id: service.id,
-        description: service.description,
-        price: service.price,
-        quantity,
-        totalPrice: service.price * quantity
-      }]);
-    } else {
-      setSelectedServices(prev => prev.filter(item => item.id !== service.id));
-    }
-  };
-
-  // Update handleQuantityChange to not call onServicesChange directly
-  const handleQuantityChange = (serviceId: number, quantity: number) => {
+  const handleQuantityChange = useCallback((serviceId: number, quantity: number) => {
     setSelectedServices(prev => prev.map(service => 
       service.id === serviceId 
         ? { ...service, quantity, totalPrice: service.price * quantity } 
         : service
     ));
-  };
+  }, []); // Empty dependency array
 
-  // Go back to room selection
-  const handleGoBack = () => {
+  const handleGoBack = useCallback(() => {
     onBackToRooms();
-  };
+  }, [onBackToRooms]); // Dependency: onBackToRooms
 
-  // Calculate totals
-  const calculateServicesCost = (services: SelectedService[] = selectedServices) => {
-    return services.reduce((total, service) => total + service.totalPrice, 0);
-  };
-
-  const totalServicesCost = calculateServicesCost();
-
-  // Calculate total price including services
-  const cartTotals = calculateCartTotal(
+  // Calculate total price including services (memoized)
+  const cartTotals = useMemo(() => {
+    return calculateCartTotal(
+      bookingDetails.rooms,
+      bookingDetails.assignedGuests,
+      bookingDetails.pensionType,
+      bookingDetails.guestTypes,
+      totalServicesCost, // Use memoized value
+      bookingDetails.roomPrivacyCosts,
+      bookingDetails.checkIn,
+      bookingDetails.checkOut
+    );
+  }, [
     bookingDetails.rooms,
     bookingDetails.assignedGuests,
     bookingDetails.pensionType,
     bookingDetails.guestTypes,
-    totalServicesCost,
+    totalServicesCost, // Dependency
     bookingDetails.roomPrivacyCosts,
     bookingDetails.checkIn,
     bookingDetails.checkOut
-  );
+  ]);
 
   // Format date to dd/MM
   const formatDate = (date: Date) => {
@@ -287,113 +205,149 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     }
   }, []);
 
-  // Modify handleProceedToPayment to include loading state
-  const handleProceedToPayment = async () => {
+  // Memoized payment handlers
+  const handleProceedToPayment = useCallback(async () => {
+    if (!contactDetails?.isValid) return; // Guard clause
+
     try {
       setIsProcessingPayment(true);
-      // Get the selected country object
-      const selectedCountryObj = countries.find(c => c.code === selectedCountry);
       
+      const checkInFormatted = formatDateForAPI(bookingDetails.checkIn);
+      const checkOutFormatted = formatDateForAPI(bookingDetails.checkOut);
+
+      if (!checkInFormatted || !checkOutFormatted) {
+        console.error("Error formatting check-in/check-out dates.");
+        alert("An internal error occurred. Unable to proceed.");
+        setIsProcessingPayment(false);
+        return;
+      }
+
       const response = await fetch('/api/create-booking', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          checkIn: bookingDetails.checkIn,
-          checkOut: bookingDetails.checkOut,
+          checkIn: checkInFormatted,
+          checkOut: checkOutFormatted,
           pensionType: bookingDetails.pensionType,
           rooms: bookingDetails.rooms,
           assignedGuests: bookingDetails.assignedGuests,
           roomPrivacyCosts: bookingDetails.roomPrivacyCosts,
           guestTypes: bookingDetails.guestTypes,
-          customerName,
-          customerPhone,
-          customerEmail,
-          selectedCountry,
-          countryName: selectedCountryObj?.englishName || selectedCountryObj?.native || selectedCountry,
-          selectedRegion,
-          notes,
+          customerName: contactDetails.customerName,
+          customerPhone: contactDetails.customerPhone,
+          customerEmail: contactDetails.customerEmail,
+          selectedCountry: contactDetails.selectedCountry,
+          countryName: contactDetails.countryName,
+          selectedRegion: contactDetails.selectedRegion,
+          notes: finalNotes,
           additionalServicesCost: totalServicesCost,
-          totalAmount: cartTotals.total
+          totalAmount: cartTotals.total,
+          selectedServices: selectedServices,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create booking');
+        // Attempt to read error message from response body
+        let errorMessage = 'Failed to create booking';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch { /* Ignore parsing error */ }
+        throw new Error(errorMessage);
       }
 
       const { sessionId } = await response.json();
 
-      // Get the Stripe checkout URL
       const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
       if (!stripe) {
         throw new Error('Failed to load Stripe');
       }
 
-      const result = await stripe.redirectToCheckout({
-        sessionId,
-      });
+      const result = await stripe.redirectToCheckout({ sessionId });
 
       if (result.error) {
-        throw result.error;
+        throw result.error; // Use Stripe's error object
       }
 
-      // The URL will be available in the redirectToCheckout response
+      // Redirect happens automatically, but handle potential URL return (though less common now)
       if ('url' in result && typeof result.url === 'string') {
-        setStripeCheckoutUrl(result.url);
-        setShowPaymentDialog(true);
+         setStripeCheckoutUrl(result.url);
+         setShowPaymentDialog(true);
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Si è verificato un errore durante il pagamento. Riprova più tardi.');
+      alert(`Si è verificato un errore durante il pagamento: ${error instanceof Error ? error.message : String(error)}. Riprova più tardi.`);
     } finally {
       setIsProcessingPayment(false);
     }
-  };
+  }, [
+    bookingDetails, 
+    contactDetails, // Use aggregated contact details
+    finalNotes,     // Use final notes
+    totalServicesCost, 
+    cartTotals,
+    selectedServices,
+  ]);
 
-  // Handle opening Stripe checkout in new tab
-  const handleOpenStripeCheckout = () => {
+  const handleOpenStripeCheckout = useCallback(() => {
     if (stripeCheckoutUrl) {
       window.open(stripeCheckoutUrl, '_blank', 'noopener,noreferrer');
       setShowPaymentDialog(false);
     }
-  };
+  }, [stripeCheckoutUrl]);
 
-  // Handle admin booking submission (skip payment)
-  const handleAdminBookingSubmit = async () => {
+  const handleAdminBookingSubmit = useCallback(async () => {
+    if (!contactDetails?.isValid) return; // Guard clause
+
     try {
       setIsProcessingPayment(true);
-      // Get the selected country object
-      const selectedCountryObj = countries.find(c => c.code === selectedCountry);
       
+      const checkInFormatted = formatDateForAPI(bookingDetails.checkIn);
+      const checkOutFormatted = formatDateForAPI(bookingDetails.checkOut);
+
+      if (!checkInFormatted || !checkOutFormatted) {
+        console.error("Error formatting check-in/check-out dates.");
+        alert("An internal error occurred. Unable to proceed.");
+        setIsProcessingPayment(false);
+        return;
+      }
+
       const response = await fetch('/api/create-admin-booking', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          checkIn: bookingDetails.checkIn,
-          checkOut: bookingDetails.checkOut,
+          checkIn: checkInFormatted,
+          checkOut: checkOutFormatted,
           pensionType: bookingDetails.pensionType,
           rooms: bookingDetails.rooms,
           assignedGuests: bookingDetails.assignedGuests,
           roomPrivacyCosts: bookingDetails.roomPrivacyCosts,
           guestTypes: bookingDetails.guestTypes,
-          customerName,
-          customerPhone,
-          customerEmail,
-          selectedCountry,
-          countryName: selectedCountryObj?.englishName || selectedCountryObj?.native || selectedCountry,
-          selectedRegion,
-          notes,
+          customerName: contactDetails.customerName,
+          customerPhone: contactDetails.customerPhone,
+          customerEmail: contactDetails.customerEmail,
+          selectedCountry: contactDetails.selectedCountry,
+          countryName: contactDetails.countryName,
+          selectedRegion: contactDetails.selectedRegion,
+          notes: finalNotes,
           additionalServicesCost: totalServicesCost,
-          totalAmount: cartTotals.total
+          totalAmount: cartTotals.total,
+          selectedServices: selectedServices,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create admin booking');
+         // Attempt to read error message from response body
+         let errorMessage = 'Failed to create admin booking';
+         try {
+           const errorData = await response.json();
+           errorMessage = errorData.message || errorMessage;
+         } catch { /* Ignore parsing error */ }
+         throw new Error(errorMessage);
       }
 
       const { bookingId } = await response.json();
@@ -403,11 +357,27 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
       
     } catch (error) {
       console.error('Admin booking error:', error);
-      alert('Si è verificato un errore durante la creazione della prenotazione. Riprova più tardi.');
+      alert(`Si è verificato un errore durante la creazione della prenotazione: ${error instanceof Error ? error.message : String(error)}. Riprova più tardi.`);
     } finally {
       setIsProcessingPayment(false);
     }
-  };
+  }, [
+    bookingDetails, 
+    contactDetails, // Use aggregated contact details
+    finalNotes,     // Use final notes
+    totalServicesCost, 
+    cartTotals,
+    selectedServices,
+  ]);
+
+  // Callback handlers for child components
+  const handleNotesChange = useCallback((newNotes: string) => {
+    setFinalNotes(newNotes);
+  }, []);
+
+  const handleContactInfoChange = useCallback((newDetails: ContactDetails) => {
+    setContactDetails(newDetails);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -447,7 +417,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                             handleServiceChange(service, checked as boolean)
                           }
                         />
-                        <Label htmlFor={`service-${service.id}`}>{service.description}</Label>
+                        <label htmlFor={`service-${service.id}`}>{service.description}</label>
                       </div>
                       
                       <div className="flex items-center gap-3">
@@ -482,125 +452,22 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
               )}
             </section>
 
-            {/* Notes Section */}
-            <section>
-              <h2 className="text-xl font-semibold mb-4">5. Note</h2>
-              <p className="text-gray-600 mb-4">
-                Aggiungi eventuali note (allergie, intolleranze, richieste particolari, ecc).
-              </p>
-              <Textarea 
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full min-h-32"
-                placeholder="Inserisci qui le tue note..."
-              />
-            </section>
+            {/* Use NotesSection component */}
+            <NotesSection 
+              initialNotes={finalNotes} 
+              onNotesChange={handleNotesChange} 
+            />
 
-            {/* Contact Information Section */}
-            <section>
-              <h2 className="text-xl font-semibold mb-4">6. Referente della prenotazione</h2>
-              <p className="text-gray-600 mb-4">
-                Inserisci le informazioni di contatto del referente della prenotazione.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customer-name">Nome e cognome *</Label>
-                  <Input 
-                    id="customer-name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Nome e cognome"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="customer-phone">Telefono *</Label>
-                  <Input 
-                    id="customer-phone"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Telefono"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="customer-email">Indirizzo email *</Label>
-                  <Input 
-                    id="customer-email"
-                    value={customerEmail}
-                    onChange={(e) => {
-                      setCustomerEmail(e.target.value);
-                      if (e.target.value) validateEmail(e.target.value);
-                    }}
-                    onBlur={() => validateEmail(customerEmail)}
-                    placeholder="Indirizzo email"
-                    className={emailError ? "border-red-500" : ""}
-                    required
-                  />
-                  {emailError && (
-                    <p className="text-red-500 text-sm">{emailError}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customer-country">Il tuo paese *</Label>
-                  <Select 
-                    value={selectedCountry}
-                    onValueChange={setSelectedCountry}
-                  >
-                    <SelectTrigger id="customer-country" className="w-full">
-                      <SelectValue placeholder="Seleziona un paese" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countriesLoading ? (
-                        <SelectItem value="loading" disabled>Caricamento paesi...</SelectItem>
-                      ) : (
-                        countries.map(country => (
-                          <SelectItem key={country.code} value={country.code}>
-                            {country.native} {country.englishName && `(${country.englishName})`}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {selectedCountry === 'IT' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="customer-region">Regione *</Label>
-                    <Select 
-                      value={selectedRegion}
-                      onValueChange={setSelectedRegion}
-                    >
-                      <SelectTrigger id="customer-region" className="w-full">
-                        <SelectValue placeholder="Seleziona una regione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {regionsLoading ? (
-                          <SelectItem value="loading" disabled>Caricamento regioni...</SelectItem>
-                        ) : (
-                          italianRegions.map(region => (
-                            <SelectItem key={region.id} value={region.id.toString()}>
-                              {region.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            </section>
+            {/* Use ContactInfoSection component */}
+            <ContactInfoSection 
+              onContactInfoChange={handleContactInfoChange} 
+            />
 
             {/* Booking Summary */}
             <section>
               <h2 className="text-xl font-semibold mb-4">Riepilogo della prenotazione:</h2>
               
-              {bookingDetails.rooms.map((room, roomIndex) => {
+              {bookingDetails.rooms.map((room) => {
                 const roomGuests = bookingDetails.assignedGuests.filter(guest => guest.roomId === room.roomId);
                 
                 if (roomGuests.length === 0) return null;
@@ -609,7 +476,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 
                 return (
                   <div key={room.roomId} className="space-y-4 mb-6">
-                    <h3 className="font-semibold">{roomIndex + 1}. {room.description}</h3>
+                    <h3 className="font-semibold">{room.description}</h3>
                     <div className="space-y-2 text-gray-600">
                       <p>Soggiorno: {formatDate(bookingDetails.checkIn)} - {formatDate(bookingDetails.checkOut)}</p>
                       <p>Num. ospiti: {roomGuests.length} ({
@@ -694,7 +561,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 <p className="text-gray-600">Per concludere la prenotazione, clicca sul pulsante &apos;Vai al pagamento&apos;.</p>
                 <div className="bg-gray-50  rounded-lg">
                   <p className="font-semibold mb-2">DISDETTA:</p>
-                  <p className="text-sm">seguire le istruzioni contenute nella mail di conferma da <span className="text-blue-600">no-reply@rifugiodibona.it</span></p>
+                  <p className="text-sm">seguire le istruzioni contenute nella mail di conferma.</p>
                   <p className="text-sm">Stai effettuando una prenotazione di gruppo, pertanto dopo la conferma non sarà possibile aggiungere/rimuovere ospiti dalla prenotazione.</p>
                 </div>
                 <div>
@@ -751,20 +618,20 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 <li>Verrai reindirizzato automaticamente alla pagina di conferma</li>
               </ol>
               <p className="mt-4 text-sm text-gray-500">
-                Se qualcosa non funziona correttamente, chiudi questa finestra e riprova il pagamento.
+                Se la finestra non si apre, clicca sul pulsante qui sotto. Se qualcosa non funziona correttamente, chiudi questa finestra e riprova il pagamento.
               </p>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
             <Button
               variant="outline"
               onClick={() => setShowPaymentDialog(false)}
             >
-              Chiudi e riprova
+              Chiudi
             </Button>
             <Button
               onClick={handleOpenStripeCheckout}
-              className="bg-gray-900 hover:bg-gray-800"
+              className="bg-gray-900 hover:bg-gray-800 text-white"
             >
               Apri pagina di pagamento
             </Button>
