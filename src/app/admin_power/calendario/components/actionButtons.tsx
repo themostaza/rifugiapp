@@ -3,11 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
 import { Calendar } from '@/components/ui/calendar';
 import { X} from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { blockDay, blockDateRange } from '@/utils/blockDays';
 
 interface BookingActionsProps {
   onActionCompleted?: () => void;
@@ -37,82 +37,16 @@ const BookingActions: React.FC<BookingActionsProps> = ({ onActionCompleted }) =>
     
     setIsSubmitting(true);
     try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const result = await blockDateRange(new Date(startDate), new Date(endDate), {
+        onSuccess: () => {
+          setIsBlockDialogOpen(false);
+          setStartDate('');
+          setEndDate('');
+          if (onActionCompleted) onActionCompleted();
+        }
+      });
       
-      // Ensure dates are properly formatted for comparison
-      start.setHours(12, 0, 0, 0); // Imposto mezzogiorno per evitare problemi di timezone
-      end.setHours(12, 0, 0, 0);
-      
-      if (start > end) {
-        console.error("La data di inizio deve essere precedente o uguale alla data di fine");
-        return;
-      }
-
-      const dates = [];
-      
-      // Generate all dates between start and end (inclusive)
-      const current = new Date(start);
-      while (current <= end) {
-        dates.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-      }
-      
-      // Format dates for the query (YYYY-MM-DD)
-      const formattedDates = dates.map(date => formatDateToYYYYMMDD(date));
-
-      // Check for existing blocked days to avoid duplicates
-      const { data: existingBlockedDays } = await supabase
-        .from('day_blocked')
-        .select('day_blocked')
-        .in('day_blocked', formattedDates);
-      
-      // Filter out dates that are already blocked
-      const existingDatesSet = new Set(
-        (existingBlockedDays || []).map(item => {
-          // Gestisce anche il caso in cui la data arriva come timestamp
-          const dateStr = typeof item.day_blocked === 'string' ? item.day_blocked : new Date(item.day_blocked).toISOString();
-          return dateStr.split('T')[0];
-        })
-      );
-      
-      const newDatesToBlock = dates.filter(date => 
-        !existingDatesSet.has(formatDateToYYYYMMDD(date))
-      );
-      
-      if (newDatesToBlock.length === 0) {
-        console.log("Tutte le date selezionate sono già bloccate");
-        setIsBlockDialogOpen(false);
-        setStartDate('');
-        setEndDate('');
-        return;
-      }
-
-      // Create the records array for bulk insert
-      const records = newDatesToBlock.map(date => ({
-        day_blocked: formatDateToYYYYMMDD(date),
-      }));
-
-      console.log("Blocco le seguenti date:", records.map(r => r.day_blocked));
-
-      // Bulk insert into day_blocked table
-      const { error } = await supabase
-        .from('day_blocked')
-        .insert(records);
-
-      if (error) throw error;
-      
-      console.log(`${newDatesToBlock.length} giorni sono stati bloccati con successo`);
-      
-      setIsBlockDialogOpen(false);
-      // Reset form
-      setStartDate('');
-      setEndDate('');
-      
-      // Trigger refresh
-      if (onActionCompleted) {
-        onActionCompleted();
-      }
+      console.log(`${result.blocked} giorni sono stati bloccati con successo. ${result.alreadyBlocked} giorni erano già bloccati.`);
     } catch (error) {
       console.error('Failed to block dates:', error);
     } finally {
@@ -125,43 +59,20 @@ const BookingActions: React.FC<BookingActionsProps> = ({ onActionCompleted }) =>
     
     setIsSubmitting(true);
     try {
-      const dateToBlock = new Date(singleDate);
-      dateToBlock.setHours(12, 0, 0, 0); // Imposto mezzogiorno per evitare problemi di timezone
+      const success = await blockDay(singleDate, {
+        onSuccess: () => {
+          setIsSingleBlockDialogOpen(false);
+          setSingleDate(undefined);
+          if (onActionCompleted) {
+            onActionCompleted();
+          }
+        }
+      });
       
-      const formattedDate = formatDateToYYYYMMDD(dateToBlock);
-      
-      console.log("Tentativo di bloccare la data:", formattedDate);
-      
-      // Check if the date is already blocked
-      const { data: existingDay } = await supabase
-        .from('day_blocked')
-        .select('*')
-        .eq('day_blocked', formattedDate);
-      
-      if (existingDay && existingDay.length > 0) {
+      if (!success) {
         console.log("Questa data è già bloccata");
         setIsSingleBlockDialogOpen(false);
         setSingleDate(undefined);
-        return;
-      }
-      
-      // Insert the new blocked day
-      const { error, data } = await supabase
-        .from('day_blocked')
-        .insert([{ day_blocked: formattedDate }])
-        .select();
-
-      if (error) throw error;
-      
-      console.log(`${format(dateToBlock, 'dd MMMM yyyy', { locale: it })} è stato bloccato con successo`);
-      console.log("Data inserita in DB:", data);
-      
-      setIsSingleBlockDialogOpen(false);
-      setSingleDate(undefined);
-      
-      // Trigger refresh
-      if (onActionCompleted) {
-        onActionCompleted();
       }
     } catch (error) {
       console.error('Failed to block date:', error);

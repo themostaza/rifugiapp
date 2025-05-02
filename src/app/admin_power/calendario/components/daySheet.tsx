@@ -3,9 +3,9 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Lock, Unlock, Calendar, Users, ExternalLink } from "lucide-react"
-import { useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { toggleBlockDay } from "@/utils/blockDays"
 
 interface Reservation {
   id: number;
@@ -95,6 +95,12 @@ const DaySheet = ({ isOpen, onClose, date, reservations, isBlocked, onDayBlockTo
     });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [blockState, setBlockState] = useState(isBlocked);
+  
+  // Sincronizza lo stato quando cambia la prop isBlocked
+  useEffect(() => {
+    setBlockState(isBlocked);
+  }, [isBlocked]);
 
   const monthsShort = [
     "Gen", "Feb", "Mar", "Apr", "Mag", "Giu",
@@ -104,21 +110,21 @@ const DaySheet = ({ isOpen, onClose, date, reservations, isBlocked, onDayBlockTo
   const handleBlockToggle = async () => {
     setIsLoading(true);
     try {
-      if (isBlocked) {
-        const { error } = await supabase
-          .from('day_blocked')
-          .delete()
-          .eq('day_blocked', date.toISOString());
-        
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('day_blocked')
-          .insert([{ day_blocked: date.toISOString() }]);
-        
-        if (error) throw error;
+      // Verifico lo stato attuale del blocco dal database, non fidandomi solo della prop
+      const currentBlockState = blockState;
+      
+      const success = await toggleBlockDay(date, currentBlockState, {
+        onSuccess: () => {
+          // Aggiorno lo stato locale
+          setBlockState(!currentBlockState);
+          // Notifica il componente padre
+          onDayBlockToggle();
+        }
+      });
+      
+      if (!success) {
+        console.error('Impossibile modificare lo stato del blocco');
       }
-      onDayBlockToggle();
     } catch (error) {
       console.error('Error toggling day block:', error);
     } finally {
@@ -228,10 +234,10 @@ const DaySheet = ({ isOpen, onClose, date, reservations, isBlocked, onDayBlockTo
             <Button
               onClick={handleBlockToggle}
               disabled={isLoading}
-              variant={isBlocked ? "destructive" : "outline"}
+              variant={blockState ? "destructive" : "outline"}
               className="w-fit whitespace-nowrap self-start"
             >
-              {isBlocked ? (
+              {blockState ? (
                 <><Unlock className="w-4 h-4 mr-2" /> Sblocca giorno</>
               ) : (
                 <><Lock className="w-4 h-4 mr-2" /> Blocca giorno</>
