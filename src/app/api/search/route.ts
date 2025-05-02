@@ -1,10 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { parse } from 'cookie';
 
 // Types for better code organization
 type DateRange = {
-  checkIn: Date;
-  checkOut: Date;
+  checkIn: string;
+  checkOut: string;
 };
 
 type GuestType = 'adult' | 'child' | 'infant';
@@ -18,11 +19,13 @@ type BlockedDay = {
 };
 
 type BookingOnHold = {
+  id: number;
   check_in: string;
   check_out: string;
   time_is_up_at: string;
   still_on_hold: boolean;
-  entered_payment: string;
+  entered_payment: string | null;
+  session_id?: string;
 };
 
 // Define proper types for the bed structure
@@ -84,22 +87,17 @@ export async function GET(request: Request) {
   try {
     console.log('🔍 New search request received:', request.url);
     const { searchParams } = new URL(request.url);
-    console.log('📌 Raw search parameters:', Object.fromEntries(searchParams));
     
     const params = validateAndParseParams(searchParams);
-    console.log('✅ Validated parameters:', {
+    console.log('📅 Using date parameters:', {
       checkIn: params.checkIn,
-      checkOut: params.checkOut,
-      guests: params.guests
+      checkOut: params.checkOut
     });
     
     // Step 1: Check for blocked days
-    console.log('🚫 Checking blocked days...');
     const blockedDays = await checkBlockedDays(params);
-    console.log(`Found ${blockedDays.length} blocked days:`, blockedDays);
     
     if (blockedDays.length > 0) {
-      console.log('❌ Request blocked due to blocked days');
       return NextResponse.json({
         available: false,
         reason: 'BLOCKED_DAYS',
@@ -108,12 +106,9 @@ export async function GET(request: Request) {
     }
 
     // Step 2: Check for ongoing bookings
-    console.log('🔄 Checking ongoing bookings...');
-    const hasOngoingBookings = await checkOngoingBookings(params);
-    console.log('Ongoing bookings status:', hasOngoingBookings);
+    const hasOngoingBookings = await checkOngoingBookings(params, request);
     
     if (hasOngoingBookings) {
-      console.log('❌ Request blocked due to ongoing bookings');
       return NextResponse.json({
         available: false,
         reason: 'BOOKING_IN_PROGRESS'
@@ -121,9 +116,7 @@ export async function GET(request: Request) {
     }
 
     // Step 3: Check bed availability
-    console.log('🛏️ Checking bed availability...');
     const availabilityResult = await checkBedAvailability(params);
-    console.log('Availability result:', availabilityResult);
     
     return NextResponse.json(availabilityResult, { status: 200 });
 
@@ -137,7 +130,7 @@ export async function GET(request: Request) {
 }
 
 function validateAndParseParams(searchParams: URLSearchParams): SearchParams {
-  console.log('🔍 Validating and parsing parameters...');
+  console.log('🔍 Validating date parameters...');
   
   const checkIn = searchParams.get('checkIn');
   const checkOut = searchParams.get('checkOut');
@@ -154,107 +147,122 @@ function validateAndParseParams(searchParams: URLSearchParams): SearchParams {
     throw new Error('Invalid guests parameter format');
   }
 
+  // Usiamo le stringhe originali direttamente senza convertirle in oggetti Date
+  // per evitare completamente i problemi di timezone
   const params = {
-    checkIn: new Date(checkIn),
-    checkOut: new Date(checkOut),
+    checkIn: checkIn,            // Stringa originale YYYY-MM-DD
+    checkOut: checkOut,          // Stringa originale YYYY-MM-DD
     guests
   };
-  console.log('✅ Parsed parameters:', params);
+  
+  console.log('✅ Using original date strings:', {
+    checkIn: params.checkIn,
+    checkOut: params.checkOut
+  });
+  
   return params;
 }
 
 async function checkBlockedDays({ checkIn, checkOut }: DateRange): Promise<BlockedDay[]> {
-  // Note: we exclude checkOut date as it's not a night of stay
-  const effectiveCheckOut = new Date(checkOut);
-  effectiveCheckOut.setDate(effectiveCheckOut.getDate() - 1);
+  // Nota: escludiamo la data di checkout poiché non è una notte di soggiorno.
+  // La query ora usa .lt (less than) per escludere il giorno esatto del checkout.
   
-  console.log('🔍 Checking blocked days for range:', { 
+  console.log('📅 Checking blocked days for date range:', { 
     checkIn, 
-    effectiveCheckOut,
-    message: '(excluding checkout date)'
+    checkOut,
+    message: '(query excludes checkout date)' // Aggiornato messaggio log
   });
-
-
   
   const { data: blockedDays, error } = await supabase
     .from('day_blocked')
     .select('day_blocked')
-    .gte('day_blocked', checkIn.toISOString())
-    .lte('day_blocked', effectiveCheckOut.toISOString());
+    .gte('day_blocked', checkIn)
+    .lt('day_blocked', checkOut); // <<< CORREZIONE: Usato .lt invece di .lte
 
   if (error) {
     console.error('❌ Error checking blocked days:', error);
     throw error;
   }
   
-  console.log(`✅ Found ${blockedDays?.length || 0} blocked days:`, blockedDays);
+  if (blockedDays?.length) {
+    console.log(`📅 Found ${blockedDays.length} blocked days:`, blockedDays);
+  }
+  
   return blockedDays || [];
 }
 
-async function checkOngoingBookings({ checkIn, checkOut }: DateRange): Promise<boolean> {
-  // Note: we exclude checkOut date as it's not a night of stay
-  const effectiveCheckOut = new Date(checkOut);
-  effectiveCheckOut.setDate(effectiveCheckOut.getDate() - 1);
-  
-  console.log('🔍 Checking ongoing bookings for range:', { 
-    checkIn, 
-    effectiveCheckOut,
-    message: '(excluding checkout date)'
-  });
-  
+async function checkOngoingBookings({ checkIn, checkOut }: DateRange, request: Request): Promise<boolean> {
+  // Leggi sessionId dai cookie della richiesta
+  let currentSessionId: string | undefined = undefined;
+  const cookieHeader = request.headers.get('cookie');
+  if (cookieHeader) {
+    try {
+      const cookiesParsed = parse(cookieHeader);
+      currentSessionId = cookiesParsed.sessionId;
+    } catch (e) {
+      console.error('Error parsing cookie header in search API:', e);
+    }
+  }
+  console.log(`🔍 Checking ongoing bookings for session: ${currentSessionId || '(no session)'}`);
+
+  console.log('📅 Checking ongoing bookings for date range:', { checkIn, checkOut });
   const nowCET = new Date(new Date().toLocaleString('en-US', { timeZone: 'CET' }));
-  console.log('Current CET time:', nowCET);
+  console.log('🔍 Querying for overlapping bookings on hold (any session)...');
   
-  const { data: ongoingBookings, error } = await supabase
+  const { data: allOngoingBookings, error } = await supabase
     .from('booking_on_hold')
     .select('*')
-    .or(`check_in.gte.${checkIn.toISOString()},check_out.lte.${effectiveCheckOut.toISOString()}`);
+    .lt('check_in', checkOut)
+    .gt('check_out', checkIn)
+    .eq('still_on_hold', true);
 
   if (error) {
     console.error('❌ Error checking ongoing bookings:', error);
     throw error;
   }
 
-  console.log('📊 Found ongoing bookings:', ongoingBookings);
-
-  const hasOngoing = (ongoingBookings || []).some((booking: BookingOnHold) => {
-    const timeIsUpAt = new Date(booking.time_is_up_at);
-    const enteredPayment = new Date(booking.entered_payment);
-    const paymentTimeLimit = new Date(enteredPayment.getTime() + 7 * 60 * 1000); // +7 minutes
-
-    const isOngoing = booking.still_on_hold &&
-      (timeIsUpAt > nowCET || (booking.entered_payment && paymentTimeLimit > nowCET));
-    
-    console.log('Booking status check:', {
-      bookingId: booking.check_in,
-      timeIsUpAt,
-      enteredPayment,
-      paymentTimeLimit,
-      isOngoing
-    });
-
-    return isOngoing;
+  // NUOVO: Filtra via i booking hold della sessione corrente
+  const ongoingBookingsFromOtherSessions = (allOngoingBookings || []).filter(booking => {
+    const isOwnSession = currentSessionId && booking.session_id === currentSessionId;
+    if (isOwnSession) {
+      console.log(`Ignoring booking hold ID ${booking.id} as it belongs to the current session.`);
+    }
+    return !isOwnSession; // Mantieni solo quelli NON della sessione corrente
   });
 
-  console.log('✅ Ongoing bookings check result:', hasOngoing);
-  return hasOngoing;
+  if (ongoingBookingsFromOtherSessions.length === 0) {
+    console.log('✅ No overlapping bookings found from OTHER sessions.');
+    return false; // Nessun blocco da altre sessioni
+  }
+  
+  console.log(`⚠️ Found ${ongoingBookingsFromOtherSessions.length} overlapping booking(s) from other sessions. Checking expiry...`);
+
+  // Controlla se ALMENO UNO dei blocchi da altre sessioni è ancora valido (non scaduto)
+  const hasValidOngoingBookingFromOthers = ongoingBookingsFromOtherSessions.some((booking: BookingOnHold) => {
+    const timeIsUpAt = new Date(booking.time_is_up_at);
+    const enteredPayment = booking.entered_payment ? new Date(booking.entered_payment) : null;
+    const paymentTimeLimit = enteredPayment ? new Date(enteredPayment.getTime() + 7 * 60 * 1000) : null; // +7 minutes
+
+    const isValid = booking.still_on_hold &&
+      (timeIsUpAt > nowCET || (enteredPayment && paymentTimeLimit && paymentTimeLimit > nowCET));
+
+    if (isValid) {
+      console.log(`Blocking due to valid hold ID ${booking.id} from session ${booking.session_id || '(unknown)'}`);
+    }
+    return isValid;
+  });
+
+  console.log(`✅ Overlapping bookings check result (from others): ${hasValidOngoingBookingFromOthers}`);
+  return hasValidOngoingBookingFromOthers;
 }
 
 async function checkBedAvailability(params: SearchParams) {
-  console.log('🔍 Checking bed availability for:', params);
-
-  // Get all existing reservations for the date range
-  // Note: we exclude checkOut date as it's not a night of stay
-  const effectiveCheckOut = new Date(params.checkOut);
-  effectiveCheckOut.setDate(effectiveCheckOut.getDate() - 1);
-  
-  console.log('Fetching existing reservations...', {
-    from: params.checkIn,
-    to: effectiveCheckOut,
-    message: '(excluding checkout date)'
+  console.log('📅 Checking bed availability for dates:', { 
+    checkIn: params.checkIn,
+    checkOut: params.checkOut
   });
 
-  console.log('Fetching guest types and discount information...');
+  // Fetch guest types and discounts
   const { data: guestTypes, error: guestTypesError } = await supabase
     .from('GuestDivision')
     .select('*');
@@ -263,11 +271,8 @@ async function checkBedAvailability(params: SearchParams) {
     console.error('❌ Error fetching guest types:', guestTypesError);
     throw guestTypesError;
   }
-
-  console.log('Guest types and discounts:', guestTypes);
   
   // First, get all available beds from RoomLinkBed
-  console.log('Fetching all available beds...');
   const { data: rawBeds, error: bedsError } = await supabase
   .from('RoomLinkBed')
   .select(`
@@ -299,9 +304,6 @@ async function checkBedAvailability(params: SearchParams) {
   // Cast the raw beds to our typed structure
   const allBeds = rawBeds as unknown as Bed[];
 
-  const totalBeds = allBeds?.length || 0;
-  console.log(`📊 Found ${totalBeds} total beds`);
-
   // Get existing reservations
   const { data: rawReservations, error: reservationsError } = await supabase
     .from('Basket')
@@ -322,8 +324,8 @@ async function checkBedAvailability(params: SearchParams) {
         )
       )
     `)
-    .gte('dayTo', params.checkIn.toISOString())
-    .lte('dayFrom', effectiveCheckOut.toISOString())   
+    .gte('dayTo', params.checkIn)
+    .lte('dayFrom', params.checkOut)   
     .eq('isPaid', true)
     .eq('isCancelled', false);
 
@@ -336,19 +338,19 @@ async function checkBedAvailability(params: SearchParams) {
   const existingReservations = rawReservations as unknown as Reservation[];
 
   // Calculate occupied beds for each day
-  console.log('Calculating occupied beds by day...');
   const occupiedBedsByDay = new Map<string, Set<number>>();
   
   existingReservations?.forEach(reservation => {
-    const reservationDates = getDatesInRange(
-      new Date(reservation.dayFrom),
-      new Date(reservation.dayTo)
-    );
+    // Convertiamo le date delle prenotazioni in array di date nel range
+    const dayFrom = reservation.dayFrom.split('T')[0]; // Ottiene YYYY-MM-DD dalla data ISO
+    const dayTo = reservation.dayTo.split('T')[0];     // Ottiene YYYY-MM-DD dalla data ISO
+    
+    // Crea array di date tra dayFrom e dayTo
+    const reservationDates = getDatesArrayInRange(dayFrom, dayTo);
+    
+    console.log(`📅 Processing reservation dates for reservation ID ${reservation.id}:`, reservationDates);
 
-    console.log(`Processing reservation dates for reservation ID ${reservation.id}:`, reservationDates);
-
-    reservationDates.forEach(date => {
-      const dateStr = date.toISOString().split('T')[0];
+    reservationDates.forEach(dateStr => {
       if (!occupiedBedsByDay.has(dateStr)) {
         occupiedBedsByDay.set(dateStr, new Set());
       }
@@ -374,62 +376,31 @@ async function checkBedAvailability(params: SearchParams) {
     });
   });
 
-  // Calculate dates in range
-  const datesInRange = getDatesInRange(params.checkIn, effectiveCheckOut);
+  // Calculate dates in range as array di stringhe YYYY-MM-DD
+  const datesInRange = getDatesArrayInRange(params.checkIn, params.checkOut);
   
   // Log occupied beds for requested dates only
-  datesInRange.forEach(date => {
-    const dateStr = date.toISOString().split('T')[0];
+  datesInRange.forEach(dateStr => {
     const occupiedBeds = occupiedBedsByDay.get(dateStr) || new Set();
-    console.log(`🛏️ Occupied beds for ${dateStr}:`, Array.from(occupiedBeds).sort((a, b) => a - b));
+    console.log(`📅 Date ${dateStr}: ${Array.from(occupiedBeds).length} occupied beds`);
   });
 
   // Calculate total required beds
   const totalRequiredBeds = params.guests.reduce((sum, guest) => sum + guest.count, 0);
-  console.log('Total required beds:', totalRequiredBeds);
-
-  // Check availability for each day
-  console.log('Checking availability for dates:', datesInRange);
-  
-  const availabilityByDay = datesInRange.map(date => {
-    const dateStr = date.toISOString().split('T')[0];
-    const occupiedBeds = occupiedBedsByDay.get(dateStr)?.size || 0;
-    const availableBeds = totalBeds - occupiedBeds;
-
-    console.log('Availability for', dateStr, {
-      totalBeds,
-      occupiedBeds,
-      availableBeds,
-      required: totalRequiredBeds,
-      isAvailable: availableBeds >= totalRequiredBeds
-    });
-
-    return {
-      date: dateStr,
-      available: availableBeds >= totalRequiredBeds,
-      availableBeds,
-      requiredBeds: totalRequiredBeds
-    };
-  });
-
-  const isAvailable = availabilityByDay.every(day => day.available);
-  console.log('Final availability result:', isAvailable);
 
   // Find beds available across all requested dates (for the entire stay)
   const availableBeds = allBeds?.filter(bed => {
     // Check if bed is available for all dates
-    return datesInRange.every(date => {
-      const dateStr = date.toISOString().split('T')[0];
+    return datesInRange.every(dateStr => {
       const occupiedBedsForDay = occupiedBedsByDay.get(dateStr) || new Set();
       return !occupiedBedsForDay.has(bed.id);
     });
   }) || [];
 
-  console.log(`Found ${availableBeds.length} beds available for all dates`);
+  console.log(`📅 Found ${availableBeds.length} beds available for all dates in range ${params.checkIn} to ${params.checkOut}`);
 
   // NUOVO: Mappa di disponibilità per ogni notte, raggruppata per stanza
-  const availabilityByNightAndRoom = datesInRange.map(date => {
-    const dateStr = date.toISOString().split('T')[0];
+  const availabilityByNightAndRoom = datesInRange.map(dateStr => {
     const occupiedBedsIds = occupiedBedsByDay.get(dateStr) || new Set();
     
     // Raggruppa i letti per stanza
@@ -554,8 +525,6 @@ async function checkBedAvailability(params: SearchParams) {
       }
     }))
   }));
-
-  console.log('available rooms:', JSON.stringify(availableRooms, null, 2));
     
   return {
     status: "enough",
@@ -565,17 +534,27 @@ async function checkBedAvailability(params: SearchParams) {
   };
 }
 
-function getDatesInRange(start: Date, end: Date): Date[] {
-  console.log('Getting dates in range:', { start, end });
-  const dates = [];
+// Funzione per ottenere un array di date come stringhe YYYY-MM-DD
+function getDatesArrayInRange(startDate: string, endDate: string): string[] {
+  console.log('📅 Getting dates array from:', startDate, 'to:', endDate);
+  
+  // Converti le stringhe in oggetti Date
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  const dates: string[] = [];
   const current = new Date(start);
-  const endDate = new Date(end);
-
-  while (current <= endDate) {
-    dates.push(new Date(current));
+  
+  // Itera fino a quando la data corrente è minore o uguale alla data di fine
+  while (current < end) {
+    // Formatta la data come YYYY-MM-DD
+    const dateStr = current.toISOString().split('T')[0];
+    dates.push(dateStr);
+    
+    // Passa al giorno successivo
     current.setDate(current.getDate() + 1);
   }
-
-  console.log('Dates in range:', dates.map(d => d.toISOString().split('T')[0]));
+  
+  console.log('📅 Generated date range:', dates);
   return dates;
 }

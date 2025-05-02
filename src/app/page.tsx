@@ -344,11 +344,22 @@ export default function BookingPage() {
   // Utility function to format date for API calls
   const formatDateForAPI = (date: Date | undefined): string | undefined => {
     if (!date) return undefined;
-    // Format the date as YYYY-MM-DD to ensure consistent timezone handling
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    
+    // Generazione robusta della data in formato YYYY-MM-DD per il database
+    // Mantiene la rappresentazione del calendario locale (giorno effettivo selezionato dall'utente)
+    const localYear = date.getFullYear();
+    const localMonth = date.getMonth() + 1; // getMonth() è 0-indexed
+    const localDay = date.getDate();
+    
+    // Assicurati che mese e giorno abbiano sempre due cifre
+    const formattedMonth = String(localMonth).padStart(2, '0');
+    const formattedDay = String(localDay).padStart(2, '0');
+    
+    // Crea la stringa nel formato YYYY-MM-DD
+    const formattedDate = `${localYear}-${formattedMonth}-${formattedDay}`;
+    
+    console.log(`📅 Formato data: data selezionata=${date.toDateString()}, formattata come YYYY-MM-DD="${formattedDate}"`);
+    return formattedDate;
   };
 
   const formatTime = (seconds: number) => {
@@ -430,10 +441,20 @@ export default function BookingPage() {
         { type: 'infant', count: infants }
       ].filter(g => g.count > 0);
 
+      // Formatta le date per l'API come YYYY-MM-DD
+      const checkInFormatted = formatDateForAPI(checkIn) || '';
+      const checkOutFormatted = formatDateForAPI(checkOut) || '';
+
       const searchParams = new URLSearchParams({
-        checkIn: formatDateForAPI(checkIn) || '',
-        checkOut: formatDateForAPI(checkOut) || '',
+        checkIn: checkInFormatted,
+        checkOut: checkOutFormatted,
         guests: JSON.stringify(guests)
+      });
+
+      console.log('📅 Parametri di ricerca:', {
+        checkIn: `${checkInFormatted} (YYYY-MM-DD)`,
+        checkOut: `${checkOutFormatted} (YYYY-MM-DD)`,
+        guests: guests.length
       });
 
       const response = await fetch(`/api/search?${searchParams}`);
@@ -456,13 +477,24 @@ export default function BookingPage() {
       } 
       
       if (data.status === 'enough' && data.rooms) {
+        console.log('Rooms found, creating booking hold with dates:', {
+          checkIn: checkInFormatted,
+          checkOut: checkOutFormatted
+        });
+        
+        const bookingPayload = {
+          checkIn: String(checkInFormatted),
+          checkOut: String(checkOutFormatted)
+        };
+        
+        console.log('Sending booking payload as pure strings:', bookingPayload);
+        
         const bookingHoldResponse = await fetch('/api/booking-hold', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            checkIn: checkIn.toISOString(),
-            checkOut: checkOut.toISOString()
-          })
+          headers: { 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify(bookingPayload)
         });
 
         const bookingHoldData = await bookingHoldResponse.json();
