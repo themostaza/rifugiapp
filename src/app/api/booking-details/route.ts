@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
-import { calculateNumberOfNights } from '@/app/utils/dateUtils'; // Assuming dateUtils exists
+import { calculateNumberOfNights } from '@/app/utils/dateUtils';
 
 // Define structure for bed info lookup
 interface BedInfo {
@@ -17,7 +17,7 @@ interface RoomDetails {
 
 interface GuestDivisionDetails {
   id: number;
-  title: string; // e.g., 'Adulti', 'Bambini'
+  title: string;
   cityTax: boolean;
   cityTaxPrice: number;
 }
@@ -25,30 +25,29 @@ interface GuestDivisionDetails {
 interface ServiceDetails {
   id: number;
   description: string;
-  price: number; // Price per unit
+  price: number;
 }
 
-// Simplified Service structure for the final list
 interface FormattedService {
   linkId: number;
   serviceId: number;
   description: string;
   quantity: number;
   unitPrice: number;
-  totalPrice: number; // quantity * unitPrice
+  totalPrice: number;
 }
 
 interface FormattedGuest {
   specId: number;
-  guestType: string; // e.g., 'Adulti', 'Bambini'
+  guestType: string;
   bedName: string;
-  price: number; // Price for this guest/bed
+  price: number;
 }
 
 interface PrivacyBlockDetail {
     day: string;
     beds: Array<{
-        id: number; // RoomLinkBed ID
+        id: number;
         name: string;
     }>;
 }
@@ -57,13 +56,9 @@ interface FormattedRoom {
   roomId: number;
   roomDescription: string;
   guests: FormattedGuest[];
-  // services: FormattedService[]; // Services moved to top level
-  privacyBlocks: PrivacyBlockDetail[]; // Added privacy block details
-  // privacyCost: number; // This was bedBlockPriceTotal per RoomReservation, now handled globally? Or remove? Let's remove for now.
+  privacyBlocks: PrivacyBlockDetail[];
 }
 
-// Type for the raw data structure from Supabase including new joins/selects
-// (These help with typing the processing logic but aren't the final response structure)
 type RawService = ServiceDetails;
 interface RawReservationLinkService {
     id: number;
@@ -90,7 +85,7 @@ interface RawRoomReservationSpec {
 interface RawReservationLinkBedBlock {
     id: number;
     day: string;
-    roomLinkBedId: number[] | null; // Array of RoomLinkBed IDs
+    roomLinkBedId: number[] | null;
 }
 interface RawRoomReservation {
     id: number;
@@ -98,7 +93,7 @@ interface RawRoomReservation {
     servicePriceTotal: number;
     ReservationLinkService: RawReservationLinkService[] | null;
     RoomReservationSpec: RawRoomReservationSpec[] | null;
-    ReservationLinkBedBlock: RawReservationLinkBedBlock[] | null; // Added
+    ReservationLinkBedBlock: RawReservationLinkBedBlock[] | null;
 }
 interface RawBasket {
     id: number;
@@ -121,39 +116,37 @@ interface RawBasket {
     RoomReservation: RawRoomReservation[] | null;
 }
 
-// Type for the final structured response
 interface FormattedBookingDetails {
-  id: number; // Basket ID
-  external_id: string; // Keep external ID for reference
+  id: number;
+  external_id: string;
   checkIn: string;
   checkOut: string;
   guestName: string;
   guestEmail: string;
   guestPhone: string;
   guestRegion: string;
-  reservationType: string; // 'bb' or 'hb'
-  totalPrice: number; // Basket total price
+  reservationType: string;
+  totalPrice: number;
   isPaid: boolean;
   isCancelled: boolean;
   createdAt: string;
-  stripeId: string; // Payment ID
-  isCreatedByAdmin: boolean; // Added this flag
-  cityTaxTotal: number; // Calculated total city tax
-  totalPrivacyCost: number; // Sum of bedBlockPriceTotal from RoomReservations
-  services: FormattedService[]; // Top-level services
-  rooms: FormattedRoom[]; // Use the new detailed room structure
+  stripeId: string;
+  isCreatedByAdmin: boolean;
+  cityTaxTotal: number;
+  totalPrivacyCost: number;
+  services: FormattedService[];
+  rooms: FormattedRoom[];
   note: string;
 }
 
-// Define a specific type for the bed details fetched in Step 3
 interface FetchedBedDetails {
     id: number;
     name: string;
     roomId: number;
-    Room: Array<{ // Expecting an array based on Supabase inference/error
+    Room: Array<{
         id: number;
         description: string;
-    }> | null; // Still allow null
+    }> | null;
 }
 
 export async function GET(request: Request) {
@@ -231,7 +224,7 @@ export async function GET(request: Request) {
         )
       `)
       .eq('external_id', externalId)
-      .single<RawBasket>(); // Use the raw type here
+      .single<RawBasket>();
 
     if (bookingError) {
       console.error('Error fetching detailed booking details:', bookingError);

@@ -716,7 +716,7 @@ export default function ConfirmationPage() {
                       </AlertDialogTrigger>
                       <AlertDialogContent className="w-[90%] sm:w-full max-w-md mx-auto">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
+                          <AlertDialogTitle>Vuoi davvero cancellare la prenotazione?</AlertDialogTitle>
                           <AlertDialogDescription>
                             {bookingData.isCreatedByAdmin 
                               ? 'Questa prenotazione è stata creata dall\'amministratore. La cancellazione non comporterà rimborsi.'

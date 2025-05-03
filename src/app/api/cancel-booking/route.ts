@@ -76,35 +76,36 @@ export async function POST(request: Request) {
 
     // Normal user bookings follow the refund policy
     // Convert dates to Italian timezone
-    const now = new Date();
     const checkInDate = new Date(booking.dayFrom);
     
     // Set check-in time to midnight (00:00) in Italian timezone
     checkInDate.setHours(0, 0, 0, 0);
     
-    // Calculate days until check-in
-    const daysUntilCheckIn = Math.ceil((checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
+  
     // Determine refund amount based on cancellation policy
-    let refundAmount: number | null = null;
-    let refundReason: string = '';
+    let refundAmount = 0;
+    let refundPercentage = 0;
 
-    if (daysUntilCheckIn > 7) {
-      // Full refund if more than 7 days before check-in
-      refundAmount = booking.totalPrice;
-      refundReason = 'Cancellation more than 7 days before check-in';
-    } else if (daysUntilCheckIn > 1) {
-      // 70% refund if between 7 days and 24 hours before check-in
-      refundAmount = booking.totalPrice * 0.7;
-      refundReason = 'Cancellation between 7 days and 24 hours before check-in';
+    // Calculate days difference
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const timeDifference = checkInDate.getTime() - today.getTime();
+    const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+
+    // Determine refund percentage based on new rules
+    if (daysDifference >= 7) {
+      refundPercentage = 1; // 100% refund
+    } else if (daysDifference >= 1) { // Between 1 day (exclusive) and 7 days (inclusive)
+      refundPercentage = 0.7; // 70% refund 
     } else {
-      // No refund if less than 24 hours before check-in
-      refundReason = 'Cancellation less than 24 hours before check-in';
+      refundPercentage = 0; // 0% refund within 24 hours
     }
 
     // Process refund if applicable
-    if (refundAmount && booking.paymentIntentId) {
+    if (refundPercentage && booking.paymentIntentId) {
       try {
+        refundAmount = booking.totalPrice * refundPercentage;
         await stripe.refunds.create({
           payment_intent: booking.paymentIntentId,
           amount: Math.round(refundAmount * 100), // Convert to cents
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       refundAmount,
-      refundReason
+      refundPercentage
     });
 
   } catch (error) {
