@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart/${basket.external_id}?payment_status=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?step=checkout`,
+      customer_email: body.customerEmail,
       metadata: {
         bookingId: basket.external_id
       },

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Calendar, Check, Download, ArrowRight, Mail, AlertCircle } from 'lucide-react'
+import { Calendar, Check, Download, ArrowRight, Mail, AlertCircle, Info } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
 import Header from '@/components/header/header'
@@ -22,34 +22,62 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { supabase } from '@/lib/supabase'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Badge } from "@/components/ui/badge"
+
+interface FormattedGuest {
+  specId: number;
+  guestType: string; // e.g., 'Adulti', 'Bambini'
+  bedName: string;
+  price: number; // Price for this guest/bed
+}
+
+interface FormattedService {
+  linkId: number;
+  serviceId: number;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number; // quantity * unitPrice
+}
+
+// Define structure for privacy block details from API
+interface PrivacyBlockDetail {
+  day: string;
+  beds: Array<{
+    id: number;
+    name: string;
+  }>;
+}
+
+interface FormattedRoom {
+  roomId: number;
+  roomDescription: string;
+  guests: FormattedGuest[];
+  privacyBlocks: PrivacyBlockDetail[]; // Added
+}
 
 interface BookingData {
-  id: number;
-  external_id: string;
+  id: number; // Basket ID (Numero prenotazione)
+  external_id: string; // External ID from URL
   checkIn: string;
   checkOut: string;
   guestName: string;
   guestEmail: string;
   guestPhone: string;
   guestRegion: string;
-  reservationType: string;
-  totalPrice: number;
+  reservationType: string; // 'bb' or 'hb'
+  totalPrice: number; // Basket total price
   isPaid: boolean;
   isCancelled: boolean;
   createdAt: string;
-  stripeId: string;
+  stripeId: string; // Payment ID
   isCreatedByAdmin: boolean;
-  rooms: {
-    id: number;
-    beds: {
-      id: number;
-      name: string;
-    }[];
-    rooms: {
-      id: number;
-      description: string;
-    }[];
-  }[];
+  cityTaxTotal: number; // Calculated total city tax from API
+  totalPrivacyCost: number; // Added: Sum of bedBlockPriceTotal from RoomReservations
+  services: FormattedService[]; // Added: Top-level services
+  rooms: FormattedRoom[]; // Use the updated FormattedRoom structure
+  note: string | null; // Guest notes
 }
 
 export default function ConfirmationPage() {
@@ -159,17 +187,27 @@ export default function ConfirmationPage() {
     // Create a new window with the print content
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(`
+      let htmlContent = `
         <html>
           <head>
             <title>Rifugio A. Dibona - Prenotazione ${bookingData.id}</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
+              body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
+              h1, h2, h3 { margin-bottom: 10px; }
+              h1 { font-size: 20px; }
+              h2 { font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 20px; }
+              h3 { font-size: 14px; font-weight: bold; margin-top: 15px; }
               .header { text-align: center; margin-bottom: 30px; }
               .section { margin-bottom: 20px; }
-              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-              .label { color: #666; font-size: 14px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 15px; }
+              .details-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+              .details-table th, .details-table td { border: 1px solid #eee; padding: 6px; text-align: left; }
+              .details-table th { background-color: #f8f8f8; font-weight: bold; }
+              .details-table td:last-child { text-align: right; }
+              .total-row td { font-weight: bold; border-top: 2px solid #aaa; }
+              .label { color: #555; font-size: 11px; display: block; margin-bottom: 2px; }
               .value { font-weight: bold; }
+              .footer-notes { margin-top: 30px; font-size: 10px; color: #666; }
             </style>
           </head>
           <body>
@@ -186,7 +224,7 @@ export default function ConfirmationPage() {
                   <div class="value">${bookingData.id}</div>
                 </div>
                 <div>
-                  <div class="label">ID</div>
+                  <div class="label">ID Pagamento (Stripe)</div>
                   <div class="value">${bookingData.stripeId || 'N/A'}</div>
                 </div>
                 <div>
@@ -197,9 +235,9 @@ export default function ConfirmationPage() {
                   <div class="label">Check-out</div>
                   <div class="value">${formatDate(bookingData.checkOut)}</div>
                 </div>
-                <div>
-                  <div class="label">Totale pagato (IVA inclusa)</div>
-                  <div class="value">€${bookingData.totalPrice.toFixed(2)}</div>
+                 <div>
+                  <div class="label">Tipo Pernottamento</div>
+                  <div class="value">${getAccommodationType(bookingData.reservationType)}</div>
                 </div>
                 <div>
                   <div class="label">Nome ospite</div>
@@ -216,34 +254,185 @@ export default function ConfirmationPage() {
               </div>
             </div>
 
-            <div class="section">
-              <h3>Camere prenotate</h3>
-              ${bookingData.rooms.map(room => `
-                <div style="margin-bottom: 10px;">
-                  <div class="value">${room.rooms[0]?.description}</div>
-                  <div class="label">Letti: ${room.beds.map(bed => bed.name).join(', ')}</div>
-                </div>
-              `).join('')}
-            </div>
+            ${ /* Add Notes section if available */
+              (bookingData.note && bookingData.note.trim() !== '') ? `
+              <div class="section">
+                <h3>Note</h3>
+                <p style="white-space: pre-line; font-size: 12px; color: #333;">${bookingData.note}</p>
+              </div>
+              ` : ''
+            }
 
-            <div class="section">
-              <h3>Contatti</h3>
+            <div class="section footer-notes">
+              <h3>Contatti e Note</h3>
               <p>Per qualsiasi informazione o richiesta, puoi contattare il gestore al numero +39 0436 860294 / +39 333 143 4408 
               oppure inviando una mail a rifugiodibona@gmail.com</p>
               <p>Il presente documento non ha valore ai fini fiscali.</p>
+              <p>Orario check-in: dalle 15:00 alle 19:00. Orario check-out: entro le 09:00.</p>
             </div>
           </body>
         </html>
-      `);
-      printWindow.document.close();
+      `;
+
+      let totalRoomSubtotal = 0; // Declare totalRoomSubtotal here
+      // Start iterating through rooms
+      bookingData.rooms.forEach(room => {
+        let roomSubtotal = 0;
+        htmlContent += `
+          <div class="section">
+            <h3>${room.roomDescription}</h3>
+            <table class="details-table">
+              <thead>
+                <tr>
+                  <th>Ospite / Letto</th>
+                  <th>Prezzo</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        // Guests/Beds for the room
+        room.guests.forEach(guest => {
+          htmlContent += `
+            <tr>
+              <td>${guest.guestType} - ${guest.bedName}</td>
+              <td>€${guest.price.toFixed(2)}</td>
+            </tr>
+          `;
+          roomSubtotal += guest.price;
+        });
+        htmlContent += `
+              </tbody>
+            </table>
+
+            ${room.privacyBlocks.length > 0 ? `
+            <h4 style="font-size: 13px; margin-top: 10px; margin-bottom: 5px;">Letti Bloccati per Privacy:</h4>
+            <table class="details-table">
+              <thead>
+                <tr>
+                  <th>Giorno</th>
+                  <th>Letti Bloccati</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${room.privacyBlocks.map(block => `
+                  <tr>
+                    <td>${formatDate(block.day)}</td>
+                    <td>${block.beds.map(b => b.name).join(', ')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            ` : ''}
+          </div>
+        `;
+        totalRoomSubtotal += roomSubtotal;
+      });
+
+      // Services
+      let servicesSubtotal = 0;
+      if (bookingData.services && bookingData.services.length > 0) {
+        htmlContent += `
+          <div class="section">
+            <h3>Servizi Aggiuntivi</h3>
+            <table class="details-table">
+              <thead>
+                <tr>
+                  <th>Servizio</th>
+                  <th>Quantità</th>
+                  <th>Prezzo Unitario</th>
+                  <th>Totale</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        bookingData.services.forEach(service => {
+          htmlContent += `
+            <tr>
+              <td>${service.description}</td>
+              <td>${service.quantity}</td>
+              <td>€${service.unitPrice.toFixed(2)}</td>
+              <td>€${service.totalPrice.toFixed(2)}</td>
+            </tr>
+          `;
+          servicesSubtotal += service.totalPrice;
+        });
+        htmlContent += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+
+
+      // Summary
+      htmlContent += `
+        <div class="section">
+          <h2>Riepilogo Costi</h2>
+          <table class="details-table">
+            <tbody>
+              <tr>
+                <td>Subtotale Camere/Ospiti</td>
+                <td>€${totalRoomSubtotal.toFixed(2)}</td>
+              </tr>
+              ${bookingData.totalPrivacyCost > 0 ? `
+              <tr>
+                <td>Supplemento Privacy</td>
+                <td>€${bookingData.totalPrivacyCost.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              ${servicesSubtotal > 0 ? `
+              <tr>
+                <td>Servizi Aggiuntivi</td>
+                <td>€${servicesSubtotal.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td>Tassa di Soggiorno</td>
+                <td>€${bookingData.cityTaxTotal.toFixed(2)}</td>
+              </tr>
+              <tr class="total-row">
+                <td>Totale Prenotazione (IVA Incl.)</td>
+                <td>€${bookingData.totalPrice.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      htmlContent += `
+        <div class="footer-notes">
+          <p>Grazie per aver scelto il Rifugio Angelo Dibona.</p>
+          <p>Indirizzo: Località Val Ampezzo - 32043 Cortina d'Ampezzo (BL)</p>
+          <p>Email: rifugiodibona@gmail.com</p>
+          <p>Telefono: +39 0436 860294 / +39 333 143 4408</p>
+          <p>Website: www.rifugiodibona.com</p>
+        </div>
+      `;
+
+      htmlContent += `
+          </body>
+        </html>
+      `;
+          
+      printWindow.document.write(htmlContent);
+      printWindow.document.close(); // Needed for some browsers
+      printWindow.focus(); // Needed for some browsers
       
-      // Wait for content to load before printing
-      printWindow.onload = () => {
-        printWindow.print();
-        // Close the window after printing (optional)
-        // printWindow.close();
-      };
+      // Give the browser a moment to load content before printing
+      setTimeout(() => {
+          printWindow.print();
+          // Optional: close the window after printing
+          // printWindow.close(); 
+      }, 500); // Adjust delay if needed
+    } else {
+      alert('Impossibile aprire la finestra di stampa. Controlla le impostazioni del tuo browser (popup blocker).');
     }
+  }
+
+  // Helper to get accommodation type description
+  const getAccommodationType = (type: string) => {
+    return type === 'bb' ? 'Bed & Breakfast' : type === 'hb' ? 'Mezza Pensione' : 'Sconosciuto';
   };
 
   if (isLoading) {
@@ -309,7 +498,7 @@ export default function ConfirmationPage() {
           </CardHeader>
 
           <CardContent className="space-y-4 sm:space-y-6 pt-4">
-            {/* Dettagli prenotazione - always visible */}
+            {/* Dettagli prenotazione - General Info Section */} 
             <div className="bg-gray-50 sm:p-5 rounded-lg border border-gray-100">
               <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Dettagli della prenotazione</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -318,7 +507,7 @@ export default function ConfirmationPage() {
                   <p className="font-medium break-all">{bookingData.id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">ID</p>
+                  <p className="text-sm text-gray-500">ID Pagamento (Stripe)</p>
                   <p className="font-medium break-all">{bookingData.stripeId || 'N/A'}</p>
                 </div>
                 <div>
@@ -335,9 +524,9 @@ export default function ConfirmationPage() {
                     {formatDate(bookingData.checkOut)}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Totale pagato (IVA inclusa)</p>
-                  <p className="font-medium">€{bookingData.totalPrice.toFixed(2)}</p>
+                 <div>
+                  <p className="text-sm text-gray-500">Tipo Pernottamento</p>
+                  <p className="font-medium">{getAccommodationType(bookingData.reservationType)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Nome ospite</p>
@@ -345,25 +534,111 @@ export default function ConfirmationPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{bookingData.guestEmail}</p>
+                  <p className="font-medium break-all">{bookingData.guestEmail}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Telefono</p>
                   <p className="font-medium">{bookingData.guestPhone}</p>
                 </div>
+                {/* Region might be useful for admin? 
+                <div>
+                  <p className="text-sm text-gray-500">Regione/Nazione</p>
+                  <p className="font-medium">{bookingData.guestRegion}</p>
+                </div>
+                */}
+              </div>
+            </div>
+
+            {/* Guest Notes Section */}
+            {bookingData.note && bookingData.note.trim() !== '' && (
+              <div className="p-3 sm:p-5 rounded-lg border border-gray-100 mb-4 sm:mb-6 bg-gray-50">
+                <h2 className="text-base sm:text-lg font-semibold mb-2">Note</h2>
+                <p className="text-sm sm:text-base text-gray-700 whitespace-pre-line">{bookingData.note}</p>
+              </div>
+            )}
+
+            {/* =================================== */}
+            {/* Detailed Booking Summary (Receipt) */}
+            {/* =================================== */}
+            <div className="bg-white sm:p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Riepilogo Costi</h2>
+              
+              {/* Iterate through rooms */} 
+              {bookingData.rooms.map((room) => (
+                <div key={room.roomId} className="mb-4 pb-4 border-b last:border-b-0">
+                  <h3 className="font-semibold text-sm sm:text-base mb-2">{room.roomDescription}</h3>
+                  <div className="space-y-1 text-xs sm:text-sm">
+                    {/* Iterate through guests in the room */} 
+                    {room.guests.map((guest) => (
+                      <div key={guest.specId} className="flex justify-between">
+                        <span>{guest.guestType} - {guest.bedName}</span>
+                        <span>€{guest.price.toFixed(2)}</span>
+                      </div>
+                    ))}
+                    
+                    {/* Show detailed privacy blocks if available */}
+                    {room.privacyBlocks && room.privacyBlocks.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-dashed border-gray-200 text-xs text-gray-500">
+                        <p className="font-medium text-gray-600 mb-1">Letti bloccati (Privacy):</p>
+                        {room.privacyBlocks.map((block, index) => (
+                          <div key={index} className="mb-1 flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{formatDate(block.day)}:</span>
+                            {block.beds.map(b => (
+                              <Badge key={b.id} variant="secondary" className="text-xs px-1.5 py-0.5">{b.name}</Badge>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Services Section (only if top-level services exist) */} 
+              {bookingData.services && bookingData.services.length > 0 && (
+                  <div className="mb-4 pb-4 border-b">
+                    <h3 className="font-semibold text-sm sm:text-base mb-2">Servizi Aggiuntivi</h3>
+                    <div className="space-y-1 text-xs sm:text-sm">
+                        {bookingData.services.map((service) => (
+                            <div key={service.linkId} className="flex justify-between">
+                                <span>{service.description} (x{service.quantity})</span>
+                                <span>€{service.totalPrice.toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
+                  </div>
+              )}
+
+              {/* City Tax */} 
+              <div className="flex justify-between text-xs sm:text-sm mb-2 text-gray-600">
+                <div className="flex items-center gap-1">
+                  <span>Tassa di soggiorno</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                         <Info className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Tassa di soggiorno applicata per legge ({/* We might need more details here like price/person/night */})</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <span>€{bookingData.cityTaxTotal.toFixed(2)}</span>
               </div>
 
-              {/* Room details */}
-              <div className="mt-3 sm:mt-4">
-                <h3 className="text-sm sm:text-md font-semibold mb-2">Camere prenotate:</h3>
-                {bookingData.rooms.map((room) => (
-                  <div key={room.id} className="mb-2">
-                    <p className="font-medium text-sm sm:text-base">{room.rooms[0]?.description}</p>
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      Letti: {room.beds.map(bed => bed.name).join(', ')}
-                    </p>
-                  </div>
-                ))}
+              {/* Display Total Privacy Cost if applicable */} 
+              {bookingData.totalPrivacyCost > 0 && (
+                <div className="flex justify-between text-xs sm:text-sm mb-2 text-gray-600">
+                    <span>Supplemento privacy totale</span>
+                    <span>€{bookingData.totalPrivacyCost.toFixed(2)}</span>
+                </div>
+              )}
+
+              {/* Total Price */} 
+              <div className="flex justify-between font-semibold text-sm sm:text-base pt-3 border-t">
+                <span>Totale (IVA inclusa)</span>
+                <span>€{bookingData.totalPrice.toFixed(2)}</span>
               </div>
             </div>
 

@@ -228,37 +228,42 @@ export async function createBooking(
   // Calculate total services cost once
   const totalServicesCost = (data.selectedServices || []).reduce((sum, service) => sum + service.totalPrice, 0);
 
-  // Create room reservations and related details
+  // Calculate total privacy cost once
+  const totalPrivacyCost = Object.values(data.roomPrivacyCosts).reduce((sum, cost) => sum + (cost || 0), 0);
+
+  // --- Create ONE RoomReservation for the entire Basket ---
+  const { data: roomReservation, error: roomReservationError } = await supabase
+    .from('RoomReservation')
+    .insert({
+      basketId: basket.id,
+      bedBlockPriceTotal: totalPrivacyCost, // Sum of all room privacy costs
+      servicePriceTotal: totalServicesCost // Use the calculated total service cost
+    })
+    .select('id') // Select only the ID
+    .single();
+
+  if (roomReservationError) {
+    console.error('Error creating the single room reservation:', roomReservationError);
+    // Consider rolling back the basket insert or marking it as failed
+    throw roomReservationError;
+  }
+  if (!roomReservation) {
+     console.error('Failed to create the single room reservation or retrieve its ID.');
+     throw new Error('Failed to create the single room reservation');
+  }
+  const roomReservationId = roomReservation.id; // Use this ID for all related items
+  console.log('Single Room reservation created with ID:', roomReservationId);
+
+  // Create room reservations and related details (now linking to the single RoomReservation)
   for (const room of data.rooms) {
     const currentRoomId = room.roomId; // Use a clear variable name
-    console.log('Processing room:', room);
+    // console.log('Processing room:', currentRoomId); // Keep logging minimal if not debugging
     const roomGuests = data.assignedGuests.filter((guest: Guest) => guest.roomId === currentRoomId);
-    console.log('Guests for this room:', roomGuests);
+    // console.log('Guests for this room:', roomGuests);
 
-    if (roomGuests.length === 0) continue;
+    if (roomGuests.length === 0) continue; // Skip room if no guests assigned
 
-    // Create RoomReservation
-    const { data: roomReservation, error: roomReservationError } = await supabase
-      .from('RoomReservation')
-      .insert({
-        basketId: basket.id,
-        bedBlockPriceTotal: data.roomPrivacyCosts[currentRoomId] || 0,
-        servicePriceTotal: totalServicesCost // Use the calculated total service cost
-      })
-      .select('id') // Select only the ID
-      .single();
-
-    if (roomReservationError) {
-      console.error('Error creating room reservation:', roomReservationError);
-      // Consider rolling back the basket insert or marking it as failed
-      throw roomReservationError;
-    }
-    if (!roomReservation) {
-       console.error('Failed to create room reservation or retrieve its ID for room:', currentRoomId);
-       throw new Error('Failed to create room reservation');
-    }
-    const roomReservationId = roomReservation.id;
-    console.log('Room reservation created with ID:', roomReservationId);
+    /* RoomReservation creation moved outside the loop */
 
     // Create RoomReservationSpec for each guest in this room
     for (const guest of roomGuests) {
@@ -317,10 +322,10 @@ export async function createBooking(
       }
     }
 
-    // Create ReservationLinkBedBlock entries for this room reservation
+    // Create ReservationLinkBedBlock entries for this room reservation (linked to the single RoomReservation)
     const blockedBedsForRoom = data.detailedBlockedBeds?.[currentRoomId];
     if (blockedBedsForRoom) {
-      console.log(`Processing bed blocks for room ${currentRoomId}:`, blockedBedsForRoom);
+      // console.log(`Processing bed blocks for room ${currentRoomId}:`, blockedBedsForRoom);
       for (const [dateStr, blockedBedIdsNum] of Object.entries(blockedBedsForRoom)) {
         if (!blockedBedIdsNum || blockedBedIdsNum.length === 0) continue;
 
@@ -338,7 +343,7 @@ export async function createBooking(
             const { error: bedBlockError } = await supabase
             .from('ReservationLinkBedBlock')
             .insert({
-              roomReservationId: roomReservationId,
+              roomReservationId: roomReservationId, // Use the single ID
               day: dateStr, // Assuming 'YYYY-MM-DD' format matches 'date' type in DB
               roomLinkBedId: roomLinkBedIds, // Array of RoomLinkBed IDs
               // bedBlockId is null as requested
@@ -356,27 +361,27 @@ export async function createBooking(
       }
     }
 
-    // Create ReservationLinkService entries for this room reservation
-    if (data.selectedServices && data.selectedServices.length > 0) {
-        console.log(`Processing services for room reservation ${roomReservationId}:`, data.selectedServices);
-        const serviceInserts = data.selectedServices.map(service => ({
-            roomReservationId: roomReservationId,
-            serviceId: service.id,
-            quantity: service.quantity
-        }));
-
-        const { error: serviceLinkError } = await supabase
-        .from('ReservationLinkService')
-        .insert(serviceInserts);
-
-        if (serviceLinkError) {
-        console.error(`Error creating ReservationLinkService entries for room reservation ${roomReservationId}:`, serviceLinkError);
-        // Consider rollback or marking as failed
-        throw serviceLinkError;
-        }
-    }
-
   } // End loop through rooms
+
+  // Create ReservationLinkService entries for the single RoomReservation (moved outside the loop)
+  if (data.selectedServices && data.selectedServices.length > 0) {
+    console.log(`Processing services for the single room reservation ${roomReservationId}:`, data.selectedServices);
+    const serviceInserts = data.selectedServices.map(service => ({
+      roomReservationId: roomReservationId, // Use the single ID
+      serviceId: service.id,
+      quantity: service.quantity
+    }));
+
+    const { error: serviceLinkError } = await supabase
+    .from('ReservationLinkService')
+    .insert(serviceInserts);
+
+    if (serviceLinkError) {
+    console.error(`Error creating ReservationLinkService entries for the single room reservation ${roomReservationId}:`, serviceLinkError);
+    // Consider rollback or marking as failed
+    throw serviceLinkError;
+    }
+  }
 
   return basket;
 } 
