@@ -1,42 +1,21 @@
 'use client'
 
-import React, { useState, useEffect, ReactElement } from 'react';
-import { ChevronLeft, ChevronRight, Lock, List, BarChart2 } from 'lucide-react';
+import React, { useState, useEffect, ReactElement, useCallback, Suspense } from 'react';
+// Import necessari da next/navigation
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Lock, Loader2 } from 'lucide-react';
 import BookingActions from './components/actionButtons';
 import DaySheet from './components/daySheet';
-import TimelineView from './components/timelineView';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface Room {
-  id: number;
-  description: string;
-}
-
-interface Reservation {
+// Interfaccia per i dati minimali scaricati inizialmente per calendario e timeline
+interface MinimalReservation {
   id: number;
   dayFrom: string;
   dayTo: string;
   name: string;
-  surname: string;
-  guestCount: number;
-  guestName?: string;
-  checkIn: string;
-  checkOut: string;
-  rooms: Room[];
-  RoomReservation: {
-    id: number;
-    RoomReservationSpec: {
-      id: number;
-      RoomLinkBed: {
-        id: number;
-        name: string;
-        Room: {
-          id: number;
-          description: string;
-        };
-      };
-    }[];
-  }[];
+  surname: string; // Aggiunto per TimelineView
+  guestCount: number; // Aggiunto per TimelineView (se usato direttamente)
+  // Aggiungere altri campi se strettamente necessari per la visualizzazione base della timeline
 }
 
 interface CalendarDay {
@@ -44,8 +23,9 @@ interface CalendarDay {
   isBlocked: boolean;
 }
 
+// L'API ora ritorna MinimalReservation[]
 interface ApiResponse {
-  reservations: Reservation[];
+  reservations: MinimalReservation[];
   calendarDays: CalendarDay[];
   error?: string;
 }
@@ -56,23 +36,67 @@ interface DayData {
   reservationCount: number;
 }
 
-const ReservationCalendar: React.FC = () => {
+const CalendarPageContent: React.FC = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Inizializza lo stato con i valori di default
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [reservations, setReservations] = useState<Reservation[]>([]);
+  
+  const [reservations, setReservations] = useState<MinimalReservation[]>([]);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag per gestire il caricamento iniziale
 
+  // Effetto per sincronizzare lo stato dall'URL SOLO al montaggio iniziale
+  useEffect(() => {
+    const yearParam = searchParams.get('year');
+    const monthParam = searchParams.get('month'); // 1-based
+
+    const year = yearParam ? parseInt(yearParam, 10) : NaN;
+    const month = monthParam ? parseInt(monthParam, 10) : NaN;
+
+    let needsStateUpdate = false;
+    let initialDate = currentDate; // Usa la data di default come base
+
+    if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
+      const dateFromUrl = new Date(year, month - 1, 1); // Mese 0-based per Date
+      // Aggiorna solo se diversa dalla data di default iniziale
+      if (dateFromUrl.getFullYear() !== initialDate.getFullYear() || dateFromUrl.getMonth() !== initialDate.getMonth()) {
+        initialDate = dateFromUrl;
+        needsStateUpdate = true;
+      }
+    }
+
+    // Se abbiamo letto valori diversi dall'URL, aggiorniamo lo stato
+    if (needsStateUpdate) {
+      setCurrentDate(initialDate);
+    } 
+    // Indipendentemente dall'aggiornamento, il caricamento iniziale è completato
+    setIsInitialLoad(false); 
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Eseguire solo al mount
+
+  // Funzione per aggiornare i parametri URL
+  const updateUrlParams = useCallback((newDate: Date) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('year', newDate.getFullYear().toString());
+    params.set('month', (newDate.getMonth() + 1).toString());
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [router, pathname, searchParams]);
+
+  // Effetto per caricare i dati quando currentDate cambia
   const fetchReservations = async (month: number, year: number): Promise<void> => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch(`/api/lista_mensile_prenotazioni?month=${month + 1}&year=${year}`);
+      const response = await fetch(`/api/calendario_mese?month=${month + 1}&year=${year}`);
       const data: ApiResponse = await response.json();
-      
       if (data.reservations && data.calendarDays) {
         setReservations(data.reservations);
         setCalendarDays(data.calendarDays);
@@ -85,67 +109,85 @@ const ReservationCalendar: React.FC = () => {
         setReservations([]);
         setCalendarDays([]);
       }
-    } catch (error) {
+    } catch (err) {
       setError('Failed to fetch reservations');
       setReservations([]);
       setCalendarDays([]);
-      console.log(error)
+      console.error(err); // Meglio loggare l'errore effettivo
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchReservations(currentDate.getMonth(), currentDate.getFullYear());
-  }, [currentDate]);
+    // Non caricare i dati finché lo stato iniziale non è stato sincronizzato dall'URL
+    if (!isInitialLoad) {
+      fetchReservations(currentDate.getMonth(), currentDate.getFullYear());
+    }
+  }, [currentDate, isInitialLoad]); // Si attiva quando cambia la data o dopo il load iniziale
 
-  const getDaysInMonth = (date: Date): number => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  // --- Funzioni Navigazione e Aggiornamento URL --- 
+
+  const navigateMonth = (monthDelta: number): void => {
+    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + monthDelta, 1);
+    setCurrentDate(newDate);
+    // Aggiorna l'URL DOPO aver aggiornato lo stato
+    updateUrlParams(newDate);
   };
-
-  const refreshBlockedDays = async () => {
-    await fetchReservations(currentDate.getMonth(), currentDate.getFullYear());
-  };
-
-  const months = [
-    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
-  ];
 
   const previousMonth = (): void => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+    navigateMonth(-1);
   };
 
   const nextMonth = (): void => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+    navigateMonth(1);
   };
 
+  // --- Resto del componente (getDaysInMonth, refreshBlockedDays, mesi, getDaysData, renderDaysList, return JSX) --- 
+
+  const getDaysInMonth = (date: Date): number => {
+      return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+  
+  const refreshBlockedDays = async () => {
+      // Ricarica i dati minimali e i giorni bloccati
+      await fetchReservations(currentDate.getMonth(), currentDate.getFullYear());
+  };
+  
+  const months = [
+      "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+      "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+  ];
+  
   const getDaysData = (): DayData[] => {
     const daysInMonth = getDaysInMonth(currentDate);
     const daysData: DayData[] = [];
-    
     for (let day = 1; day <= daysInMonth; day++) {
-      const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      const currentDayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      const normalizedCurrentDayStart = new Date(currentDayDate.setHours(0, 0, 0, 0));
       
-      // Check if day is blocked
-      const isBlocked = calendarDays.some(
-        calDay => new Date(calDay.date).getDate() === day && calDay.isBlocked
-      );
+      const isBlocked = calendarDays.some(calDay => {
+          const blockDate = new Date(calDay.date);
+          const normalizedBlockDateStart = new Date(blockDate.setHours(0, 0, 0, 0));
+          return normalizedBlockDateStart.getTime() === normalizedCurrentDayStart.getTime() && calDay.isBlocked;
+      });
       
-      // Count reservations for this day
       const reservationCount = reservations.filter(res => {
-        const checkIn = new Date(res.checkIn);
-        const checkOut = new Date(res.checkOut);
-        return currentDay >= checkIn && currentDay < checkOut;
+        const checkIn = new Date(res.dayFrom);
+        const checkOut = new Date(res.dayTo);
+        const normalizedCheckIn = new Date(checkIn.setHours(0, 0, 0, 0));
+        const normalizedCheckOut = new Date(checkOut.setHours(0, 0, 0, 0));
+        
+        return normalizedCheckIn.getTime() <= normalizedCurrentDayStart.getTime() && 
+               normalizedCheckOut.getTime() > normalizedCurrentDayStart.getTime();
       }).length;
       
       daysData.push({
-        date: currentDay,
+        date: currentDayDate,
         isBlocked,
         reservationCount
       });
     }
-    
     return daysData;
   };
   
@@ -214,150 +256,78 @@ const ReservationCalendar: React.FC = () => {
     );
   };
 
+  // Mostra il loading iniziale finché l'URL non è stato processato
+  if (isInitialLoad) {
+    return (
+        <div className="max-w-6xl mx-auto p-4 h-96 flex items-center justify-center">
+            Loading initial state...
+        </div>
+    );
+  }
+
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      <BookingActions onActionCompleted={refreshBlockedDays} />
-      
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold">
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-semibold mb-4">Calendario Prenotazioni</h1>
+      <BookingActions 
+        // Passa i props necessari a BookingActions
+      />
+
+      <div className="bg-white rounded-md shadow p-4 mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <button onClick={previousMonth} className="p-2 rounded hover:bg-gray-100">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <h2 className="text-xl font-semibold">
             {months[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={previousMonth}
-              className="p-2 rounded hover:bg-gray-100"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={nextMonth}
-              className="p-2 rounded hover:bg-gray-100"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+          <button onClick={nextMonth} className="p-2 rounded hover:bg-gray-100">
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-500 mx-auto mb-2" />
+            Caricamento...
           </div>
-        </div>
-        
-        <Tabs defaultValue="list" onValueChange={(value) => setViewMode(value as 'list' | 'timeline')}>
-          <TabsList>
-            <TabsTrigger value="list">
-              <List className="w-4 h-4 mr-2" />
-              Lista giorni
-            </TabsTrigger>
-            <TabsTrigger value="timeline">
-              <BarChart2 className="w-4 h-4 mr-2" />
-              Timeline
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
-      <div className="mb-4">
-        {viewMode === 'list' ? (
-          loading ? (
-            <div className="h-96 flex items-center justify-center">
-              Loading...
-            </div>
-          ) : (
-            renderDaysList()
-          )
+        ) : error ? (
+          <div className="text-center py-10 text-red-500">Errore: {error}</div>
         ) : (
-          loading ? (
-            <div className="h-96 flex items-center justify-center">
-              Loading...
-            </div>
-          ) : (
-            <TimelineView 
-              currentDate={currentDate} 
-              reservations={reservations} 
-              calendarDays={calendarDays}
-              onSelectDate={(date) => {
-                setSelectedDate(date);
-                setIsSheetOpen(true);
-              }}
-            />
-          )
+          renderDaysList()
         )}
       </div>
       
       {selectedDate && (
         <DaySheet
           isOpen={isSheetOpen}
-          onClose={() => {
-            setIsSheetOpen(false);
-            setSelectedDate(null);
-          }}
+          onClose={() => setIsSheetOpen(false)}
           date={selectedDate}
-          reservations={reservations.filter(res => {
-            if (!selectedDate) return false;
-            
-            const checkIn = new Date(res.dayFrom || res.checkIn);
-            const checkOut = new Date(res.dayTo || res.checkOut);
-            
-            // Normalizza la data selezionata ignorando l'ora
-            const normalizedSelectedDate = new Date(
-              selectedDate.getFullYear(),
-              selectedDate.getMonth(),
-              selectedDate.getDate()
-            );
-            
-            // Normalizza anche le date di check-in e check-out
-            const normalizedCheckIn = new Date(
-              checkIn.getFullYear(),
-              checkIn.getMonth(),
-              checkIn.getDate()
-            );
-            
-            const normalizedCheckOut = new Date(
-              checkOut.getFullYear(),
-              checkOut.getMonth(),
-              checkOut.getDate()
-            );
-            
-            // La prenotazione è valida se il check-in è prima o uguale al giorno selezionato
-            // e il check-out è dopo il giorno selezionato
-            return (
-              normalizedCheckIn <= normalizedSelectedDate &&
-              normalizedCheckOut > normalizedSelectedDate
-            );
-          }).map(res => {
-            // Aggiungiamo un log per vedere i dati che stiamo passando a DaySheet
-            console.log(`[CALENDAR] Passing reservation #${res.id} to DaySheet:`, {
-              id: res.id,
-              name: res.name,
-              guestCount: res.guestCount,
-              checkIn: res.checkIn || res.dayFrom,
-              checkOut: res.checkOut || res.dayTo
-            });
-            return res;
+          isBlocked={calendarDays.some(calDay => {
+              const blockDate = new Date(calDay.date);
+              const normalizedBlockDateStart = new Date(blockDate.setHours(0, 0, 0, 0));
+              const normalizedSelectedDateStart = new Date(new Date(selectedDate).setHours(0, 0, 0, 0));
+              return normalizedBlockDateStart.getTime() === normalizedSelectedDateStart.getTime() && calDay.isBlocked;
           })}
-          isBlocked={calendarDays.some(
-            day => {
-              if (!selectedDate) return false;
-              
-              const blockDate = new Date(day.date);
-              
-              return (
-                blockDate.getDate() === selectedDate.getDate() &&
-                blockDate.getMonth() === selectedDate.getMonth() &&
-                blockDate.getFullYear() === selectedDate.getFullYear() &&
-                day.isBlocked
-              );
-            }
-          )}
-          onDayBlockToggle={refreshBlockedDays}
+          onDayBlockToggle={() => {
+              refreshBlockedDays(); // Ricarica i dati minimali quando lo stato di blocco cambia
+          }}
         />
       )}
     </div>
   );
 };
 
-export default ReservationCalendar;
+// Nuovo componente wrapper che include Suspense
+const ReservationCalendarPage: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-gray-400" /> 
+      </div>
+    }>
+      <CalendarPageContent />
+    </Suspense>
+  );
+};
+
+export default ReservationCalendarPage;
