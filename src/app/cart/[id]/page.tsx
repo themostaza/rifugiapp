@@ -21,13 +21,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { supabase } from '@/lib/supabase'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 
 interface FormattedGuest {
   specId: number;
-  guestType: string; // e.g., 'Adulti', 'Bambini'
+  guestType: string; // e.g., 'Adulti', 'Bambini', 'Neonati'
   bedName: string;
   price: number; // Price for this guest/bed
 }
@@ -87,19 +86,9 @@ export default function ConfirmationPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [refundMessage, setRefundMessage] = useState('')
-  const [isAdmin, setIsAdmin] = useState(false)
   const params = useParams()
   const bookingExternalId = params.id as string
 
-  // Check if current user is admin
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setIsAdmin(!!session)
-    }
-    
-    checkAdminStatus()
-  }, [])
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -706,8 +695,8 @@ export default function ConfirmationPage() {
                   </Button>
 
                   {/* Mostra il pulsante di cancellazione per tutte le prenotazioni non cancellate, 
-                      indipendentemente dal fatto che siano create dall'admin o meno */}
-                  {isBeforeCheckIn() || isAdmin || bookingData.isCreatedByAdmin ? (
+                      indipendentemente dal fatto che siano create dall\'admin o meno */}
+                  {isBeforeCheckIn() ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" className="w-full sm:w-auto px-8">
