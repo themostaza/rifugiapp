@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronLeft, Users, Settings, LogOut, CalendarDays, BedDouble, FileText, ExternalLink } from 'lucide-react';
+import { ChevronLeft, Users, Settings, LogOut, CalendarDays, BedDouble, FileText, ExternalLink, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
@@ -64,6 +64,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
       name: 'Calendario', 
       icon: <CalendarDays className="h-5 w-5" />,  
       href: '/admin_power/calendario' 
+    },
+    {
+      name: 'DB Prenotazioni',
+      icon: <Database className="h-5 w-5" />,
+      href: '/admin_power/db_prenotazioni'
     },
     { 
       name: 'Stanze', 

@@ -8,29 +8,26 @@ import { X} from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { blockDay, blockDateRange } from '@/utils/blockDays';
+import { useRouter } from 'next/navigation';
 
 interface BookingActionsProps {
   onActionCompleted?: () => void;
+  currentYear?: number;
+  currentMonth?: number;
 }
 
-const BookingActions: React.FC<BookingActionsProps> = ({ onActionCompleted }) => {
+const BookingActions: React.FC<BookingActionsProps> = ({ 
+  onActionCompleted,
+  currentYear, 
+  currentMonth 
+}) => {
+  const router = useRouter();
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
   const [isSingleBlockDialogOpen, setIsSingleBlockDialogOpen] = useState(false);
-  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [singleDate, setSingleDate] = useState<Date | undefined>(undefined);
-  const [reportDate, setReportDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-
-  // Funzione per formattare la data nel formato YYYY-MM-DD senza problemi di timezone
-  const formatDateToYYYYMMDD = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const handleMultiBlockConfirm = async () => {
     if (!startDate || !endDate) return;
@@ -86,87 +83,51 @@ const BookingActions: React.FC<BookingActionsProps> = ({ onActionCompleted }) =>
     setSingleDate(undefined);
   };
 
-  const closeReportDialog = () => {
-    setIsReportDialogOpen(false);
-    setReportDate(undefined);
-  };
-
   // Funzione per aprire una nuova prenotazione come admin
   const handleNewAdminBooking = () => {
     // Apre la pagina principale in una nuova tab con un parametro che indica che è una prenotazione admin
     window.open('/?admin_booking=true', '_blank');
   };
 
-  // Funzione per generare il prospetto
-  const handleGenerateReport = async () => {
-    if (!reportDate) return;
-    
-    setIsGeneratingReport(true);
-    try {
-      const formattedDate = formatDateToYYYYMMDD(reportDate);
-      
-      // Genera il PDF e scaricalo
-      const response = await fetch(`/api/genera-prospetto?date=${formattedDate}`, {
-        method: 'GET',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Errore nella generazione del prospetto');
-      }
-      
-      // Crea un blob dall'oggetto response
-      const blob = await response.blob();
-      
-      // Crea un URL per il download
-      const url = window.URL.createObjectURL(blob);
-      
-      // Crea un elemento 'a' per il download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `prospetto-${formattedDate}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Pulisci
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      setIsReportDialogOpen(false);
-      setReportDate(undefined);
-    } catch (error) {
-      console.error('Errore nella generazione del prospetto:', error);
-    } finally {
-      setIsGeneratingReport(false);
+  const handleOpenDbPrenotazioni = () => {
+    let path = '/admin_power/db_prenotazioni';
+    if (currentYear && currentMonth) {
+      path += `?year=${currentYear}&month=${currentMonth}`
     }
+    router.push(path);
   };
 
   return (
     <>
-      <div className="flex gap-2 mb-4">
-        <Button 
-          variant="outline" 
-          onClick={() => setIsBlockDialogOpen(true)}
-        >
-          Blocco multiplo
-        </Button>
-        <Button 
-          variant="outline"
-          onClick={() => setIsSingleBlockDialogOpen(true)}
-        >
-          Blocca prenotazioni
-        </Button>
-        <Button 
-          variant="outline"
-          onClick={() => setIsReportDialogOpen(true)}
-        >
-          Genera prospetto
-        </Button>
-        <Button 
-          variant="default"
-          onClick={handleNewAdminBooking}
-        >
-          Nuova prenotazione come Admin
-        </Button>
+      <div className="flex gap-2 mb-4 justify-between items-center">
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsBlockDialogOpen(true)}
+          >
+            Blocco multiplo
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setIsSingleBlockDialogOpen(true)}
+          >
+            Blocca prenotazioni
+          </Button>
+          <Button 
+            variant="default"
+            onClick={handleNewAdminBooking}
+          >
+            Nuova prenotazione come Admin
+          </Button>
+        </div>
+        <div>
+          <Button 
+            variant="outline"
+            onClick={handleOpenDbPrenotazioni}
+          >
+            DB prenotazioni
+          </Button>
+        </div>
       </div>
 
       {/* Dialog for blocking multiple days */}
@@ -277,66 +238,6 @@ const BookingActions: React.FC<BookingActionsProps> = ({ onActionCompleted }) =>
                 disabled={isSubmitting || !singleDate}
               >
                 {isSubmitting ? 'Salvataggio...' : 'Conferma'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog for generating report with date selector */}
-      <Dialog open={isReportDialogOpen} onOpenChange={(open) => {
-        if (!open) {
-          closeReportDialog();
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Genera prospetto giornaliero</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="reportDate">Seleziona la data per il prospetto:</Label>
-              <div className="border rounded-md p-2">
-                {reportDate && (
-                  <div className="flex items-center justify-between mb-3 p-2 bg-gray-100 rounded">
-                    <span className="font-medium">
-                      {format(reportDate, "PPP", { locale: it })}
-                    </span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setReportDate(undefined)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                <Calendar
-                  mode="single"
-                  selected={reportDate}
-                  onSelect={setReportDate}
-                  locale={it}
-                  className="mx-auto"
-                />
-              </div>
-            </div>
-            <div className="mt-4 text-sm">
-              Verrà generato un prospetto con l&apos;occupazione delle camere per la data selezionata.
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={closeReportDialog}
-                disabled={isGeneratingReport}
-              >
-                Annulla
-              </Button>
-              <Button
-                onClick={handleGenerateReport}
-                disabled={isGeneratingReport || !reportDate}
-              >
-                {isGeneratingReport ? 'Generazione...' : 'Genera PDF'}
               </Button>
             </div>
           </div>

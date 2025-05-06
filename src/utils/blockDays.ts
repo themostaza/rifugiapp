@@ -108,21 +108,15 @@ export const toggleBlockDay = async (date: Date, isCurrentlyBlocked: boolean, op
   try {
     const normalizedDate = normalizeDate(date);
     const formattedDate = formatDateToYYYYMMDD(normalizedDate);
-    const isoDate = date.toISOString();
     
     if (isCurrentlyBlocked) {
-      // Prova a cancellare con entrambi i formati per assicurarsi di coprire tutti i casi
-      const { error: errorFormatted } = await supabase
+      // Only attempt to delete the YYYY-MM-DD formatted string
+      const { error } = await supabase
         .from('day_blocked')
         .delete()
         .eq('day_blocked', formattedDate);
       
-      const { error: errorISO } = await supabase
-        .from('day_blocked')
-        .delete()
-        .eq('day_blocked', isoDate);
-      
-      if (errorFormatted && errorISO) throw errorFormatted;
+      if (error) throw error; // Throw if the primary delete operation failed
       
       if (options?.onSuccess) options.onSuccess();
       return true;
