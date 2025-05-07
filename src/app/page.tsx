@@ -289,7 +289,7 @@ export default function BookingPage() {
   const [infants, setInfants] = useState(0)
   const [language, setLanguage] = useState('it')
   const [showResults, setShowResults] = useState(false)
-  const [pensionType, setPensionType] = useState<'bb' | 'hb'>('bb')
+  const [pensionType, setPensionType] = useState<'bb' | 'hb'>('hb')
   const [countdown, setCountdown] = useState<number | null>(null)
   const intervalIdRef = useRef<number | null>(null)  
   const [assignedGuests, setAssignedGuests] = useState<Guest[]>([])
