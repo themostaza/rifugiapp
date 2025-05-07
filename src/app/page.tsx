@@ -729,10 +729,10 @@ export default function BookingPage() {
                         // Directly use the range from react-day-picker
                         setCheckIn(range?.from);
                         setCheckOut(range?.to);
-                        // Close the popover if a full range is selected
-                        if (range?.from && range?.to) {
-                          setCalendarOpen(false);
-                        }
+                        // Remove automatic closing of the popover
+                        // if (range?.from && range?.to) {
+                        //   setCalendarOpen(false);
+                        // }
                       }}
                       numberOfMonths={1}
                       disabled={(date) => date < today}
