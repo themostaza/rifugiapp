@@ -112,6 +112,7 @@ export async function POST(request: Request) {
           .from('Basket')
           .update({
             isPaid: true,
+            isCancelled: false,
             paymentIntentId: session.payment_intent as string,
             updatedAt: new Date().toISOString()
           })
