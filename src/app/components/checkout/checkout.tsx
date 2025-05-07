@@ -415,8 +415,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                         <Checkbox 
                           id={`service-${service.id}`}
                           checked={selectedServices.some(s => s.id === service.id)}
-                          onCheckedChange={(checked) => 
-                            handleServiceChange(service, checked as boolean)
+                          onCheckedChange={(checked: boolean) => 
+                            handleServiceChange(service, checked)
                           }
                         />
                         <label htmlFor={`service-${service.id}`}>{service.description}</label>
@@ -426,7 +426,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                         {service.requestQuantity && selectedServices.some(s => s.id === service.id) && (
                           <Select 
                             value={selectedServices.find(s => s.id === service.id)?.quantity.toString() || "1"}
-                            onValueChange={(value) => handleQuantityChange(service.id, parseInt(value))}
+                            onValueChange={(value: string) => handleQuantityChange(service.id, parseInt(value))}
                           >
                             <SelectTrigger className="w-20">
                               <SelectValue placeholder="Qtà" />

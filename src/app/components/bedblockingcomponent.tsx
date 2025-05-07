@@ -306,7 +306,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                                 <div className="flex items-center gap-2">
                                   <Checkbox 
                                     checked={isBlocked}
-                                    onCheckedChange={(checked) => {
+                                    onCheckedChange={(checked: boolean) => {
                                       handleBedSelection(date, bed.id, checked === true);
                                     }}
                                     id={`bed-${date}-${bed.id}`}

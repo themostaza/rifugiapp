@@ -826,7 +826,7 @@ const RoomManagement: React.FC<RoomProps> = ({
                     <Label>Tipologia letto</Label>
                     <Select
                       value={selectedBedId?.toString() || ''}
-                      onValueChange={(value) => setSelectedBedId(parseInt(value))}
+                      onValueChange={(value: string) => setSelectedBedId(parseInt(value))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleziona tipologia letto" />

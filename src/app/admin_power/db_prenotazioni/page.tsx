@@ -212,7 +212,7 @@ const DBPrenotazioniPage = () => {
         return (
           <Select
             value={filter.value === undefined || filter.value === null ? '' : String(filter.value)}
-            onValueChange={(val) => updateFilter(filter.id, { value: val === 'true' ? true : val === 'false' ? false : undefined })}
+            onValueChange={(val: string) => updateFilter(filter.id, { value: val === 'true' ? true : val === 'false' ? false : undefined })}
           >
             <SelectTrigger><SelectValue placeholder="Seleziona valore" /></SelectTrigger>
             <SelectContent>
@@ -257,7 +257,7 @@ const DBPrenotazioniPage = () => {
               <div key={filter.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2 p-3 border rounded-md bg-white">
                 <Select
                   value={filter.field}
-                  onValueChange={(value) => {
+                  onValueChange={(value: string) => {
                     const fieldConfig = availableFields.find(f => f.value === value);
                     updateFilter(filter.id, { 
                       field: value as keyof BasketEntry, 
@@ -276,7 +276,7 @@ const DBPrenotazioniPage = () => {
 
                 <Select
                   value={filter.operator}
-                  onValueChange={(value) => updateFilter(filter.id, { operator: value })}
+                  onValueChange={(value: string) => updateFilter(filter.id, { operator: value })}
                   disabled={!filter.field || operatorsForField.length === 0}
                 >
                   <SelectTrigger><SelectValue placeholder="Seleziona Operatore" /></SelectTrigger>
@@ -399,7 +399,7 @@ const DBPrenotazioniPage = () => {
               <div className="flex items-center space-x-1">
                  <Select
                     value={itemsPerPage.toString()}
-                    onValueChange={(value) => {
+                    onValueChange={(value: string) => {
                         setItemsPerPage(parseInt(value, 10));
                         setCurrentPage(1); // Reset to first page
                     }}
