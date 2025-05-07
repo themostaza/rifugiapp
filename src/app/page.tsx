@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Calendar, ChevronDown, Users, Plus, Minus, Search, ShoppingCart, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -309,6 +309,8 @@ export default function BookingPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [isAdminBooking, setIsAdminBooking] = useState(false);
 
+  const today = useMemo(() => new Date(), []);
+
   
   // Handler per ricevere i dati dettagliati dei letti bloccati da RoomContent
   const handleBlockedBedsChange = useCallback((roomId: number, blockedBedsData: { [date: string]: number[] }) => {
@@ -336,26 +338,6 @@ export default function BookingPage() {
       }
     }
   }, []) // array di dipendenze vuoto
-
-  const handleCalendarSelect = (date: Date | undefined) => {
-    if (!date) return;
-
-    // Create a new date object with the selected date at midnight in the local timezone
-    const selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-    if (!checkIn || (checkIn && checkOut)) {
-      setCheckIn(selectedDate);
-      setCheckOut(undefined);
-    } else {
-      if (selectedDate > checkIn) {
-        setCheckOut(selectedDate);
-        setCalendarOpen(false);
-      } else {
-        setCheckIn(selectedDate);
-        setCheckOut(undefined);
-      }
-    }
-  }
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -744,11 +726,16 @@ export default function BookingPage() {
                         to: checkOut
                       }}
                       onSelect={(range) => {
-                        if (range?.from) handleCalendarSelect(range.from)
-                        if (range?.to) setCheckOut(range.to)
+                        // Directly use the range from react-day-picker
+                        setCheckIn(range?.from);
+                        setCheckOut(range?.to);
+                        // Close the popover if a full range is selected
+                        if (range?.from && range?.to) {
+                          setCalendarOpen(false);
+                        }
                       }}
                       numberOfMonths={1}
-                      disabled={(date) => date < new Date()}
+                      disabled={(date) => date < today}
                       locale={it}
                     />
                   </PopoverContent>
