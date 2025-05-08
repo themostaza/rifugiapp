@@ -30,7 +30,7 @@ export async function middleware(req: NextRequest) {
         const { data, error } = await supabaseGeneralClient
           .from('Basket') // Ensure your table name is correct
           .select('external_id')
-          .eq('bubbleBasketId', bubbleBasketId)
+          .eq('id', bubbleBasketId)
           .single()
 
         if (error) {
