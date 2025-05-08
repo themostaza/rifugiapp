@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Loader2, PlusCircle, XCircle } from 'lucide-react';
+import { Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, Loader2, PlusCircle, XCircle, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 // Data type from Supabase Basket table
 interface BasketEntry {
@@ -466,89 +467,100 @@ const DBPrenotazioniPage = () => {
 
       {/* Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl">Dettaglio Prenotazione #{selectedEntry?.id}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] p-0 flex flex-col">
           {selectedEntry && (
-            <div className="mt-4 space-y-3 text-sm max-h-[calc(90vh-150px)] overflow-y-auto p-1 pr-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                <div className="col-span-1 md:col-span-2 border-b pb-2 mb-1">
-                    <p className="text-xs text-gray-500">ID Prenotazione</p>
-                    <p className="font-medium text-base text-blue-600">{selectedEntry.id}</p>
-                </div>
+            <div className="overflow-y-auto p-4 space-y-4 flex-grow">
+              <DialogHeader className="pb-2 border-b">
+                <DialogTitle className="text-xl">Dettaglio Prenotazione #{selectedEntry?.id}</DialogTitle>
+              </DialogHeader>
 
-                <div><p className="text-xs text-gray-500">Check-in</p><p className="font-medium">{new Date(selectedEntry.dayFrom).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
-                <div><p className="text-xs text-gray-500">Check-out</p><p className="font-medium">{new Date(selectedEntry.dayTo).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
-                
-                <div><p className="text-xs text-gray-500">Nome</p><p className="font-medium">{selectedEntry.name || '-'}</p></div>
-                <div><p className="text-xs text-gray-500">Cognome</p><p className="font-medium">{selectedEntry.surname || '-'}</p></div>
-                
-                <div className="col-span-1 md:col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium truncate">{selectedEntry.mail || '-'}</p></div>
-                <div><p className="text-xs text-gray-500">Telefono</p><p className="font-medium">{selectedEntry.phone || '-'}</p></div>
-                
-                <div><p className="text-xs text-gray-500">Stato</p><p className="font-medium">{selectedEntry.city || '-'}</p></div>
-                <div><p className="text-xs text-gray-500">Regione</p><p className="font-medium">{selectedEntry.region || '-'}</p></div>
-
-                <div className="col-span-1 md:col-span-2 pt-2 border-t mt-1">
-                    <p className="text-xs text-gray-500">Tipo Prenotazione</p>
-                    <p className="font-medium">{selectedEntry.reservationType === 'hb' ? 'Mezza Pensione' : selectedEntry.reservationType === 'bb' ? 'Bed & Breakfast' : selectedEntry.reservationType}</p>
-                </div>
-                <div><p className="text-xs text-gray-500">Prezzo Totale</p><p className="font-medium text-lg text-green-600">{selectedEntry.totalPrice.toFixed(2)} €</p></div>
-                
-                <div><p className="text-xs text-gray-500">Pagata</p><p className={`font-semibold ${selectedEntry.isPaid ? 'text-green-700' : 'text-red-700'}`}>{selectedEntry.isPaid ? 'Sì' : 'No'}</p></div>
-                <div><p className="text-xs text-gray-500">Creata da Admin</p><p className={`font-semibold ${selectedEntry.isCreatedByAdmin ? 'text-purple-700' : 'text-gray-700'}`}>{selectedEntry.isCreatedByAdmin ? 'Sì' : 'No'}</p></div>
-                
-                <div><p className="text-xs text-gray-500">Cancellata</p><p className={`font-semibold ${selectedEntry.isCancelled ? 'text-red-700' : 'text-gray-700'}`}>{selectedEntry.isCancelled ? 'Sì' : 'No'}</p></div>
-                 {selectedEntry.isCancelled && selectedEntry.isCancelledAtTime && (
-                    <div><p className="text-xs text-gray-500">Cancellata il</p><p className="font-medium">{new Date(selectedEntry.isCancelledAtTime).toLocaleString('it-IT')}</p></div>
-                 )}
-                 {(!selectedEntry.isCancelled || !selectedEntry.isCancelledAtTime) && <div />}
-                
-                <div className="col-span-1 md:col-span-2 pt-2 border-t mt-1">
-                    <p className="text-xs text-gray-500">Esterno ID</p>
-                    <p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block">{selectedEntry.external_id || 'N/A'}</p>
-                </div>
-                <div><p className="text-xs text-gray-500">Stripe ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.stripeId || 'N/A'}</p></div>
-                <div><p className="text-xs text-gray-500">Payment Intent ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.paymentIntentId || 'N/A'}</p></div>
-                
-                <div><p className="text-xs text-gray-500">Creata il</p><p className="font-medium">{new Date(selectedEntry.createdAt).toLocaleString('it-IT')}</p></div>
-                <div><p className="text-xs text-gray-500">Aggiornata il</p><p className="font-medium">{new Date(selectedEntry.updatedAt).toLocaleString('it-IT')}</p></div>
-              </div>
-
-              {/* Stripe Button */}
-              {selectedEntry.stripeId && (
-                <div className="mt-4 pt-4 border-t">
-                  <Button 
+              <div className="flex gap-3 flex-wrap items-center">
+                {selectedEntry.external_id && (
+                  <Link href={`/cart/${selectedEntry.external_id}`} target="_blank" passHref>
+                    <Button variant="outline" size="sm" className="w-fit flex items-center justify-center gap-2">
+                      <ExternalLink className="h-4 w-4" />
+                      Vedi Preventivo
+                    </Button>
+                  </Link>
+                )}
+                {selectedEntry.stripeId && (
+                  <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => window.open(`https://dashboard.stripe.com/payments/${selectedEntry.stripeId}`, '_blank')}
-                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white hover:text-white"
+                    className="w-fit flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white hover:text-white"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M22 12H12"/><path d="m15 15-3-3 3-3"/></svg>
-                    Vedi Transazione su Stripe
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M22 12H12"/><path d="m15 15-3-3 3-3"/></svg>
+                    Vedi su Stripe
                   </Button>
-                </div>
-              )}
-
-              {/* Note rendering */}
-              {selectedEntry && (
-                <div className="pt-3 mt-2 border-t">
-                  <p className="text-xs text-gray-500 mb-0.5">Note Cliente:</p>
-                  <div className="p-2.5 border rounded bg-gray-50 whitespace-pre-wrap text-gray-700 text-[13px]">
-                    {(selectedEntry.note && selectedEntry.note.trim()) ? selectedEntry.note : 'Nessuna nota inserita.'}
+                )}
+              </div>
+              
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                  <div className="col-span-1 md:col-span-2 border-b pb-2 mb-1">
+                      <p className="text-xs text-gray-500">ID Prenotazione</p>
+                      <p className="font-medium text-base text-blue-600">{selectedEntry.id}</p>
                   </div>
-                </div>
-              )}
 
-              {/* Booking details rendering */}
-              {(selectedEntry && typeof selectedEntry.booking_details === 'object' && selectedEntry.booking_details !== null) ? (
-                <div className="pt-3 mt-2 border-t">
-                  <p className="text-xs text-gray-500 mb-0.5">Dettagli Booking (JSON):</p>
-                  <pre className="mt-1 p-2.5 border rounded bg-gray-800 text-white text-xs overflow-x-auto max-h-48">
-                    {JSON.stringify(selectedEntry.booking_details, null, 2)}
-                  </pre>
+                  <div><p className="text-xs text-gray-500">Check-in</p><p className="font-medium">{new Date(selectedEntry.dayFrom).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
+                  <div><p className="text-xs text-gray-500">Check-out</p><p className="font-medium">{new Date(selectedEntry.dayTo).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
+                  
+                  <div><p className="text-xs text-gray-500">Nome</p><p className="font-medium">{selectedEntry.name || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Cognome</p><p className="font-medium">{selectedEntry.surname || '-'}</p></div>
+                  
+                  <div className="col-span-1 md:col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium truncate">{selectedEntry.mail || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Telefono</p><p className="font-medium">{selectedEntry.phone || '-'}</p></div>
+                  
+                  <div><p className="text-xs text-gray-500">Stato</p><p className="font-medium">{selectedEntry.city || '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">Regione</p><p className="font-medium">{selectedEntry.region || '-'}</p></div>
+
+                  <div className="col-span-1 md:col-span-2 pt-2 border-t mt-1">
+                      <p className="text-xs text-gray-500">Tipo Prenotazione</p>
+                      <p className="font-medium">{selectedEntry.reservationType === 'hb' ? 'Mezza Pensione' : selectedEntry.reservationType === 'bb' ? 'Bed & Breakfast' : selectedEntry.reservationType}</p>
+                  </div>
+                  <div><p className="text-xs text-gray-500">Prezzo Totale</p><p className="font-medium text-lg text-green-600">{selectedEntry.totalPrice.toFixed(2)} €</p></div>
+                  
+                  <div><p className="text-xs text-gray-500">Pagata</p><p className={`font-semibold ${selectedEntry.isPaid ? 'text-green-700' : 'text-red-700'}`}>{selectedEntry.isPaid ? 'Sì' : 'No'}</p></div>
+                  <div><p className="text-xs text-gray-500">Creata da Admin</p><p className={`font-semibold ${selectedEntry.isCreatedByAdmin ? 'text-purple-700' : 'text-gray-700'}`}>{selectedEntry.isCreatedByAdmin ? 'Sì' : 'No'}</p></div>
+                  
+                  <div><p className="text-xs text-gray-500">Cancellata</p><p className={`font-semibold ${selectedEntry.isCancelled ? 'text-red-700' : 'text-gray-700'}`}>{selectedEntry.isCancelled ? 'Sì' : 'No'}</p></div>
+                   {selectedEntry.isCancelled && selectedEntry.isCancelledAtTime && (
+                      <div><p className="text-xs text-gray-500">Cancellata il</p><p className="font-medium">{new Date(selectedEntry.isCancelledAtTime).toLocaleString('it-IT')}</p></div>
+                   )}
+                   {(!selectedEntry.isCancelled || !selectedEntry.isCancelledAtTime) && <div />}
+                  
+                  <div className="col-span-1 md:col-span-2 pt-2 border-t mt-1">
+                      <p className="text-xs text-gray-500">Esterno ID</p>
+                      <p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block">{selectedEntry.external_id || 'N/A'}</p>
+                  </div>
+                  <div><p className="text-xs text-gray-500">Stripe ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.stripeId || 'N/A'}</p></div>
+                  <div><p className="text-xs text-gray-500">Payment Intent ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.paymentIntentId || 'N/A'}</p></div>
+                  
+                  <div><p className="text-xs text-gray-500">Creata il</p><p className="font-medium">{new Date(selectedEntry.createdAt).toLocaleString('it-IT')}</p></div>
+                  <div><p className="text-xs text-gray-500">Aggiornata il</p><p className="font-medium">{new Date(selectedEntry.updatedAt).toLocaleString('it-IT')}</p></div>
                 </div>
-              ) : null}
+
+                {/* Note rendering */}
+                {selectedEntry && (
+                  <div className="pt-3 mt-2 border-t">
+                    <p className="text-xs text-gray-500 mb-0.5">Note Cliente:</p>
+                    <div className="p-2.5 border rounded bg-gray-50 whitespace-pre-wrap text-gray-700 text-[13px]">
+                      {(selectedEntry.note && selectedEntry.note.trim()) ? selectedEntry.note : 'Nessuna nota inserita.'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Booking details rendering */}
+                {(selectedEntry && typeof selectedEntry.booking_details === 'object' && selectedEntry.booking_details !== null) ? (
+                  <div className="pt-3 mt-2 border-t">
+                    <p className="text-xs text-gray-500 mb-0.5">Dettagli Booking (JSON):</p>
+                    <pre className="mt-1 p-2.5 border rounded bg-gray-800 text-white text-xs overflow-x-auto max-h-48">
+                      {JSON.stringify(selectedEntry.booking_details, null, 2)}
+                    </pre>
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
         </DialogContent>
