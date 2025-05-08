@@ -79,6 +79,9 @@ const DBPrenotazioniPage = () => {
   const [filters, setFilters] = useState<FilterCondition[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<FilterCondition[]>([]);
 
+  // Sorting State
+  const [sortColumn, setSortColumn] = useState<keyof BasketEntry>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const availableFields: FilterableField[] = [
     { value: 'id', label: 'ID Prenotazione', type: 'number', operators: ['eq', 'neq', 'gt', 'lt', 'gte', 'lte'] },
@@ -95,6 +98,17 @@ const DBPrenotazioniPage = () => {
     { value: 'isCancelled', label: 'Cancellata', type: 'boolean', operators: ['is'] },
     { value: 'reservationType', label: 'Tipo Prenotazione', type: 'text', operators: ['eq', 'neq'] },
     // Add more fields as needed
+  ];
+
+  const sortableFields: { value: keyof BasketEntry; label: string }[] = [
+    { value: 'id', label: 'ID Prenotazione' },
+    { value: 'dayFrom', label: 'Check-in' },
+    { value: 'dayTo', label: 'Check-out' },
+    { value: 'surname', label: 'Cognome Cliente' },
+    { value: 'totalPrice', label: 'Prezzo Totale' },
+    { value: 'createdAt', label: 'Data Creazione' },
+    { value: 'updatedAt', label: 'Data Ultima Modifica' },
+    // Add other fields you want to be sortable
   ];
 
   const operatorLabels: Record<string, string> = {
@@ -125,8 +139,8 @@ const DBPrenotazioniPage = () => {
         const params = new URLSearchParams({
           page: currentPage.toString(),
           limit: itemsPerPage.toString(),
-          sortBy: 'dayFrom',
-          sortOrder: 'desc',
+          sortBy: sortColumn,
+          sortOrder: sortOrder,
         });
         if (debouncedSearchTerm) {
           params.append('search', debouncedSearchTerm);
@@ -157,13 +171,12 @@ const DBPrenotazioniPage = () => {
     };
 
     fetchData();
-  }, [currentPage, itemsPerPage, debouncedSearchTerm, appliedFilters]); 
+  }, [currentPage, itemsPerPage, debouncedSearchTerm, appliedFilters, sortColumn, sortOrder]); 
 
   const handleRowClick = (entry: BasketEntry) => {
     setSelectedEntry(entry);
     setIsDetailDialogOpen(true);
   };
-
 
   // Filter Management Functions
   const addFilter = () => {
@@ -181,7 +194,9 @@ const DBPrenotazioniPage = () => {
   const handleApplyFilters = () => {
     const validFilters = filters.filter(f => f.field && f.operator && (f.value !== '' && f.value !== null && f.value !== undefined));
     setAppliedFilters(validFilters);
-    setCurrentPage(1); 
+    // Applying filters should also apply the current sortColumn and sortOrder selections
+    // The useEffect for fetchData will pick up changes to sortColumn, sortOrder, and appliedFilters
+    setCurrentPage(1);
   };
   
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -298,7 +313,7 @@ const DBPrenotazioniPage = () => {
               </div>
             );
           })}
-          <div className="mt-3 flex gap-3">
+          <div className="mt-3 flex gap-3 items-start flex-wrap"> {/* Use items-start and flex-wrap for better layout */}
             <Button variant="outline" onClick={addFilter} className="flex items-center">
               <PlusCircle className="mr-2 h-4 w-4" /> Aggiungi Filtro
             </Button>
@@ -308,6 +323,48 @@ const DBPrenotazioniPage = () => {
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Sorting Controls Section */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Ordinamento</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label htmlFor="sort-by-select" className="block text-sm font-medium text-gray-700 mb-1">Ordina per</label>
+                    <Select
+                        value={sortColumn}
+                        onValueChange={(value) => setSortColumn(value as keyof BasketEntry)}
+                    >
+                        <SelectTrigger id="sort-by-select">
+                            <SelectValue placeholder="Seleziona campo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {sortableFields.map(field => (
+                                <SelectItem key={field.value} value={field.value}>
+                                    {field.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <label htmlFor="sort-order-select" className="block text-sm font-medium text-gray-700 mb-1">Direzione</label>
+                    <Select
+                        value={sortOrder}
+                        onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}
+                    >
+                        <SelectTrigger id="sort-order-select">
+                            <SelectValue placeholder="Seleziona direzione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="desc">Discendente (più recenti/maggiori prima)</SelectItem>
+                            <SelectItem value="asc">Ascendente (meno recenti/minori prima)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 {/* The "Applica Filtri" button now also applies sorting changes */}
+                 {/* Consider if a separate "Applica Ordinamento" button is desired or if it's fine with "Applica Filtri" */}
+            </div>
         </div>
       </div>
 
@@ -334,13 +391,14 @@ const DBPrenotazioniPage = () => {
                   <TableHead className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pagata</TableHead>
                   <TableHead className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Admin</TableHead>
                   <TableHead className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cancellato?</TableHead>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Creazione</TableHead>
                   <TableHead className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Dettagli</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="bg-white divide-y divide-gray-200">
                 {data.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-gray-500 py-10">
+                    <TableCell colSpan={11} className="text-center text-gray-500 py-10">
                       {appliedFilters.length > 0 || debouncedSearchTerm ? 'Nessuna prenotazione trovata con i criteri selezionati.' : 'Nessuna prenotazione nel database.'}
                     </TableCell>
                   </TableRow>
@@ -378,6 +436,9 @@ const DBPrenotazioniPage = () => {
                       </TableCell>
                       <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-center font-medium">
                         {entry.isCancelled ? 'Sì' : 'No'}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-left">
+                        {new Date(entry.createdAt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </TableCell>
                       <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-center">
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(entry); }} title="Vedi dettagli">
@@ -483,11 +544,11 @@ const DBPrenotazioniPage = () => {
                     </Button>
                   </Link>
                 )}
-                {selectedEntry.stripeId && (
+                {selectedEntry.paymentIntentId && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`https://dashboard.stripe.com/payments/${selectedEntry.stripeId}`, '_blank')}
+                    onClick={() => window.open(`https://dashboard.stripe.com/payments/${selectedEntry.paymentIntentId}`, '_blank')}
                     className="w-fit flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white hover:text-white"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M22 12H12"/><path d="m15 15-3-3 3-3"/></svg>
