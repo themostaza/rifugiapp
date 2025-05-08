@@ -298,13 +298,13 @@ const BedDetailPdfGenerator: React.FC<BedDetailPdfGeneratorProps> = ({
   return (
     <Button
       variant="outline"
-      size="icon"
-      className="h-8 w-8 flex-shrink-0"
+      className="flex items-center self-start h-9 px-3"
       onClick={handleGeneratePdf}
-      title="Genera PDF Riepilogo Letti"
+      title="Prospetto Stanze"
       disabled={disabled || roomOccupancySummary.length === 0}
     >
-      <Download className="h-4 w-4" />
+      <Download className="h-4 w-4 mr-2" />
+      Prospetto Stanze
     </Button>
   );
 };

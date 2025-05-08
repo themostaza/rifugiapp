@@ -70,6 +70,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
       icon: <Database className="h-5 w-5" />,
       href: '/admin_power/db_prenotazioni'
     },
+    {
+      name: 'DB Mail',
+      icon: <Database className="h-5 w-5" />,
+      href: '/admin_power/resend-sync'
+    },
     { 
       name: 'Stanze', 
       icon: <BedDouble className="h-5 w-5" />,  

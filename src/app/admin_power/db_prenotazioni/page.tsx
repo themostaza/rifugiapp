@@ -528,9 +528,9 @@ const DBPrenotazioniPage = () => {
 
       {/* Detail Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] p-0 flex flex-col">
+        <DialogContent className="min-w-[60vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] p-0 flex flex-col">
           {selectedEntry && (
-            <div className="overflow-y-auto p-4 space-y-4 flex-grow">
+            <div className="overflow-y-auto p-6 space-y-4 flex-grow">
               <DialogHeader className="pb-2 border-b">
                 <DialogTitle className="text-xl">Dettaglio Prenotazione #{selectedEntry?.id}</DialogTitle>
               </DialogHeader>
@@ -616,7 +616,7 @@ const DBPrenotazioniPage = () => {
                 {(selectedEntry && typeof selectedEntry.booking_details === 'object' && selectedEntry.booking_details !== null) ? (
                   <div className="pt-3 mt-2 border-t">
                     <p className="text-xs text-gray-500 mb-0.5">Dettagli Booking (JSON):</p>
-                    <pre className="mt-1 p-2.5 border rounded bg-gray-800 text-white text-xs overflow-x-auto max-h-48">
+                    <pre className="mt-1 p-2.5 border rounded bg-gray-800 text-white text-xs overflow-x-auto">
                       {JSON.stringify(selectedEntry.booking_details, null, 2)}
                     </pre>
                   </div>

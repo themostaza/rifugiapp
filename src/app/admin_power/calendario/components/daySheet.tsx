@@ -8,6 +8,7 @@ import Link from "next/link"
 import { toggleBlockDay } from "@/utils/blockDays"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import BedDetailPdfGenerator from "./BedDetailPdfGenerator"
+import ReservationListPdfGenerator from "./ReservationListPdfGenerator"
 
 // --- Copied Manual Type Definitions (from API route) ---
 interface Room {
@@ -580,22 +581,9 @@ const DaySheet = ({ isOpen, onClose, date, isBlocked, onDayBlockToggle }: DayShe
         side="right" 
         className="!w-[90vw] sm:!w-[70vw] md:!w-[60vw] lg:!w-[50vw] !max-w-[800px] flex flex-col"
       >
-        {/* Fixed Header with Download Button */}
-        <SheetHeader className="mb-4 border-b pb-4 flex-shrink-0">
-          <div className="flex justify-between items-center gap-4"> 
-            {/* API-based PDF Download Button - MOVED HERE & Modified */} 
-            {!isLoadingDetails && !detailError && roomOccupancySummary.length > 0 && (
-                <BedDetailPdfGenerator
-                  date={date}
-                  roomOccupancySummary={roomOccupancySummary}
-                  bedStatusesByRoom={bedStatusesByRoom}
-                  detailedReservations={detailedReservations}
-                  disabled={isLoadingDetails || !!detailError || roomOccupancySummary.length === 0}
-                  availableBeds={availableBeds}
-                  totalBlockedBeds={totalBlockedBeds}
-                  totalGuests={totalGuests}
-                />
-            )}
+        {/* Fixed Header*/}
+        <SheetHeader className="mb-1 border-b pb-4 flex-shrink-0">
+          <div className="flex justify-between items-center gap-4">
             {/* Sheet Title */}
             <SheetTitle className="flex items-center gap-2 flex-wrap flex-grow"> {/* Added flex-grow */}
               <span className="text-xl">
@@ -627,7 +615,29 @@ const DaySheet = ({ isOpen, onClose, date, isBlocked, onDayBlockToggle }: DayShe
         {/* Scrollable Content Area */} 
         <div className="flex-grow overflow-y-auto pr-2 space-y-4">
           {/* Actions and Summary Area (Moved Inside Scrollable Area) */}
-          <div className="space-y-3">
+          <div className="flex flex-col space-y-3">
+            {/* Container for the two PDF buttons */}
+            <div className="flex space-x-2">
+              {!isLoadingDetails && !detailError && roomOccupancySummary.length > 0 && (
+                  <BedDetailPdfGenerator
+                    date={date}
+                    roomOccupancySummary={roomOccupancySummary}
+                    bedStatusesByRoom={bedStatusesByRoom}
+                    detailedReservations={detailedReservations}
+                    disabled={isLoadingDetails || !!detailError || roomOccupancySummary.length === 0}
+                    availableBeds={availableBeds}
+                    totalBlockedBeds={totalBlockedBeds}
+                    totalGuests={totalGuests}
+                  />
+              )}
+              {!isLoadingDetails && !detailError && detailedReservations.length > 0 && (
+                <ReservationListPdfGenerator
+                  date={date}
+                  detailedReservations={detailedReservations}
+                  disabled={isLoadingDetails || !!detailError || detailedReservations.length === 0}
+                />
+              )}
+            </div>
             <Button
               onClick={handleBlockToggle}
               disabled={isLoadingBlockToggle}
