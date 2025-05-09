@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
-import { X} from 'lucide-react';
+import { X, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { blockDay, blockDateRange } from '@/utils/blockDays';
@@ -97,6 +97,14 @@ const BookingActions: React.FC<BookingActionsProps> = ({
     router.push(path);
   };
 
+  const handleOpenVistaCalendario = () => {
+    let path = '/admin_power/vista_calendario';
+    if (currentYear && currentMonth) {
+      path += `?year=${currentYear}&month=${currentMonth}`;
+    }
+    router.push(path);
+  };
+
   return (
     <>
       <div className="flex gap-2 mb-4 justify-between items-center">
@@ -126,6 +134,13 @@ const BookingActions: React.FC<BookingActionsProps> = ({
             onClick={handleOpenDbPrenotazioni}
           >
             DB prenotazioni
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleOpenVistaCalendario}
+            className="ml-2"
+          >
+            <CalendarIcon className="w-4 h-4 mr-1" /> Vista calendario
           </Button>
         </div>
       </div>

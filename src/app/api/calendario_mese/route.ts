@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     // Query ottimizzata per le prenotazioni usando stringhe di data
     const { data: reservations, error: reservationsError } = await supabase
       .from('Basket')
-      .select('id, dayFrom, dayTo')
+      .select('id, dayFrom, dayTo, name, external_id')
       .or('and(isPaid.eq.true,isCancelled.eq.false),and(isCreatedByAdmin.eq.true,isCancelled.eq.false)')
       .lte('dayFrom', lastDayOfMonthStr) // La prenotazione inizia entro la fine del mese
       .gte('dayTo', firstDayOfMonthStr); // La prenotazione finisce dopo l'inizio del mese
