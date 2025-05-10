@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
-import { X, Calendar as CalendarIcon } from 'lucide-react';
+import { X, Calendar as CalendarIcon, ChartGantt } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { blockDay, blockDateRange } from '@/utils/blockDays';
@@ -140,7 +140,14 @@ const BookingActions: React.FC<BookingActionsProps> = ({
             onClick={handleOpenVistaCalendario}
             className="ml-2"
           >
-            <CalendarIcon className="w-4 h-4 mr-1" /> Vista calendario
+            <ChartGantt className="w-4 h-4 mr-1" /> Timeline
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/admin_power/past_calendar')}
+            className="ml-2"
+          >
+            <CalendarIcon className="w-4 h-4 mr-1" /> Storico
           </Button>
         </div>
       </div>

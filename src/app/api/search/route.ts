@@ -38,6 +38,7 @@ interface RoomDetails {
   id: number;
   description: string;
   RoomImage?: RoomImage[];
+  createdAt: string;
 }
 
 interface BedPricing {
@@ -177,7 +178,7 @@ async function checkBlockedDays({ checkIn, checkOut }: DateRange): Promise<Block
     .from('day_blocked')
     .select('day_blocked')
     .gte('day_blocked', checkIn)
-    .lt('day_blocked', checkOut); // <<< CORREZIONE: Usato .lt invece di .lte
+    .lt('day_blocked', checkOut); 
 
   if (error) {
     console.error('❌ Error checking blocked days:', error);
@@ -289,6 +290,7 @@ async function checkBedAvailability(params: SearchParams) {
     Room (
       id,
       description,
+      createdAt,
       RoomImage (
         id,
         url
@@ -423,6 +425,8 @@ async function checkBedAvailability(params: SearchParams) {
         roomAvailabilityMap.set(bed.roomId, {
           roomId: bed.roomId,
           description: bed.Room.description,
+          images: bed.Room.RoomImage?.map(img => img.url) || [],
+          createdAt: bed.Room.createdAt,
           allBeds: [],
           availableBeds: []
         });
@@ -484,6 +488,7 @@ async function checkBedAvailability(params: SearchParams) {
         roomId: bed.roomId,
         description: bed.Room.description,
         images: bed.Room.RoomImage?.map(img => img.url) || [],
+        createdAt: bed.Room.createdAt,
         allBeds: [],
         availableBeds: []
       });
@@ -514,7 +519,7 @@ async function checkBedAvailability(params: SearchParams) {
   });
 
   // Filter rooms that have at least one available bed and convert to array
-  const availableRooms = Array.from(roomsMap.values())
+  let availableRooms = Array.from(roomsMap.values())
   .filter(room => room.availableBeds.length > 0)
   .map(room => ({
     roomId: room.roomId,
@@ -535,8 +540,13 @@ async function checkBedAvailability(params: SearchParams) {
         bb: bed.pricing?.bb || 0,
         mp: bed.pricing?.mp || 0
       }
-    }))
+    })),
+    createdAt: room.createdAt
   }));
+  // Ordina le stanze per createdAt crescente
+  availableRooms = availableRooms.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  // Stampa l'ordine delle stanze per debug
+  //console.log('ORDINE STANZE API:', availableRooms.map(r => ({ id: r.roomId, description: r.description, createdAt: r.createdAt })));
     
   return {
     status: "enough",
