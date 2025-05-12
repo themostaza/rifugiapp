@@ -27,7 +27,7 @@ async function logEmailAttempt(payload: {
     // Construct the full URL for the log API endpoint
     // Assuming the app runs on localhost:3000 or a similar base URL in development
     // In production, this needs to be the absolute URL of your deployment
-    const logApiUrl = new URL('/api/log-email-attempt', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').toString();
+    const logApiUrl = new URL('/api/log-email-attempt', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').toString();
     
     console.log(`[send-email] Logging attempt to: ${logApiUrl} with payload:`, payload);
     
