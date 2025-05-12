@@ -51,10 +51,10 @@ export async function POST(request: Request) {
       .from('Basket')
       .select(`
         external_id,
-        checkIn,
-        checkOut,
-        customerEmail, 
-        customerName,
+        dayFrom,
+        dayTo,
+        mail, 
+        name,
         isPaid, 
         paymentConfirmationEmailSent
       `)
@@ -80,14 +80,14 @@ export async function POST(request: Request) {
          console.warn(`Webhook per pagamento ${bookingId} ricevuto ma il DB non lo segna come pagato dopo l'update. Qualcosa non va.`);
       }
 
-      const emailTo = session.customer_details?.email || bookingData.customerEmail;
-      const name = session.customer_details?.name || bookingData.customerName;
+      const emailTo = session.customer_details?.email || bookingData.mail;
+      const name = session.customer_details?.name || bookingData.name;
 
       if (!emailTo) {
         console.error(`Cannot send payment success email for booking ${bookingId}: recipient email is missing.`);
         return;
       }
-      if (!bookingData.checkIn || !bookingData.checkOut) {
+      if (!bookingData.dayFrom || !bookingData.dayTo) {
         console.error(`Cannot send payment success email for booking ${bookingId}: checkIn/checkOut dates are missing.`);
         return;
       }
@@ -95,8 +95,8 @@ export async function POST(request: Request) {
       console.log(`Attempting to send payment success email to ${emailTo} for booking ${bookingId}`);
       const emailSent = await sendPaymentSuccessEmail(emailTo, {
         name: name,
-        checkIn: bookingData.checkIn,
-        checkOut: bookingData.checkOut,
+        checkIn: bookingData.dayFrom,
+        checkOut: bookingData.dayTo,
         external_id: bookingData.external_id,
       });
 
