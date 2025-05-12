@@ -156,11 +156,12 @@ export default function ConfirmationPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      day: 'numeric',
-      month: 'numeric',
-      year: 'numeric'
-    })
+    // Estrai la parte della data dalla stringa ISO (YYYY-MM-DD)
+    const datePart = dateString.split('T')[0];
+    // Dividi in anno, mese, giorno
+    const [year, month, day] = datePart.split('-');
+    // Formatta nel formato italiano (DD/MM/YYYY)
+    return `${day}/${month}/${year}`;
   }
 
   const isBeforeCheckIn = () => {
