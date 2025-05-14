@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Calendar, Check, Download, ArrowRight, Mail, AlertCircle, Info } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
@@ -86,6 +86,9 @@ export default function ConfirmationPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [refundMessage, setRefundMessage] = useState('')
+  const [editingName, setEditingName] = useState(false)
+  const [newName, setNewName] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const params = useParams()
   const bookingExternalId = params.id as string
 
@@ -425,6 +428,66 @@ export default function ConfirmationPage() {
     return type === 'bb' ? 'Bed & Breakfast' : type === 'hb' ? 'Mezza Pensione' : 'Sconosciuto';
   };
 
+  const handleNameEdit = () => {
+    if (!bookingData) return;
+    setNewName(bookingData.guestName);
+    setEditingName(true);
+    // Focus on the input after it becomes visible
+    setTimeout(() => {
+      if (nameInputRef.current) {
+        nameInputRef.current.focus();
+      }
+    }, 50);
+  };
+
+  const handleNameSave = async () => {
+    if (!bookingData || !newName.trim()) {
+      setEditingName(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/update-guest-name', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          external_id: bookingExternalId,
+          name: newName.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update name');
+      }
+
+      // Update local state with new name
+      setBookingData({
+        ...bookingData,
+        guestName: newName.trim()
+      });
+      
+      setEditingName(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update name');
+      setEditingName(false);
+    }
+  };
+
+  const handleNameCancel = () => {
+    setEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameSave();
+    } else if (e.key === 'Escape') {
+      handleNameCancel();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -520,7 +583,34 @@ export default function ConfirmationPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Nome ospite</p>
-                  <p className="font-medium">{bookingData.guestName}</p>
+                  {editingName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={nameInputRef}
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        onKeyDown={handleNameKeyDown}
+                        className="border-b border-gray-500 bg-transparent py-1 font-medium w-full focus:outline-none"
+                        autoFocus
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={handleNameSave}
+                        className="h-7 px-2"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p 
+                      className="font-medium cursor-pointer hover:underline flex items-center gap-1" 
+                      onClick={handleNameEdit}
+                    >
+                      {bookingData.guestName}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
