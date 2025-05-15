@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       allow_promotion_codes: true,
       billing_address_collection: 'required',
       // customer_creation: 'always', // Considera 'if_required' se hai già clienti Stripe
-      expires_at: Math.floor(Date.now() / 1000) + 360, // 6 minutes
+      expires_at: Math.floor(Date.now() / 1000) + 1800, // 30 min
       locale: 'it'
     });
     console.log('Stripe session created:', session.id);
