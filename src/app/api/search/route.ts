@@ -329,8 +329,6 @@ async function checkBedAvailability(params: SearchParams) {
     // Corrected temporal overlap condition: dayFrom < checkOut AND checkIn < dayTo
     .lt('dayFrom', params.checkOut)   
     .gt('dayTo', params.checkIn)     
-    // Include paid OR admin-created reservations that are not cancelled
-    .or('isPaid.eq.true,isCreatedByAdmin.eq.true') 
     .eq('isCancelled', false);
 
   if (reservationsError) {
