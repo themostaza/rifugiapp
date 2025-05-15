@@ -28,7 +28,7 @@ export default function RootLayoutClient({
   const shouldHideMenu = excludedPages.some(page => 
     pathname === page || 
     (page !== '/' && page.endsWith('/') && pathname.startsWith(page))
-  )
+  ) || pathname.includes('/cart/')
   // Se la pagina è nella lista delle escluse, mostra solo il contenuto
   if (shouldHideMenu) {
     return children
