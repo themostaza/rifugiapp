@@ -109,6 +109,11 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabaseAuthClient.auth.getSession()
   
+  // Redirect authenticated users away from login page
+  if (session && pathname === '/login') {
+    return NextResponse.redirect(new URL('/admin_power/calendario', origin))
+  }
+  
   // Check if the request is for an admin route or contains admin_booking parameter
   const isAdminRoute = pathname.startsWith('/admin_power')
   const hasAdminBookingParam = searchParams.has('admin_booking')

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,18 +19,6 @@ function LoginContent() {
     email: '',
     password: ''
   })
-
-  // Check if already logged in
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.push(redirectTo)
-      }
-    }
-    
-    checkSession()
-  }, [router, redirectTo])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({

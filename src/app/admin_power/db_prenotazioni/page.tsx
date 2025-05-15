@@ -409,9 +409,14 @@ const DBPrenotazioniPage = () => {
                     if (type === 'bb') return 'Bed & Breakfast';
                     return type;
                   };
-                  const rowClassName = entry.isCancelled 
-                    ? 'bg-red-100 hover:bg-red-200 text-red-900' 
-                    : 'hover:bg-gray-50';
+                  
+                  // Determina il colore di sfondo della riga in base allo stato
+                  let rowClassName = 'hover:bg-gray-50';
+                  if (entry.isCancelled) {
+                    rowClassName = 'bg-red-100 hover:bg-red-200 text-red-900';
+                  } else if (!entry.isPaid && !entry.isCreatedByAdmin) {
+                    rowClassName = 'bg-yellow-100 hover:bg-yellow-200 text-yellow-900';
+                  }
 
                   return (
                     <TableRow 
@@ -425,7 +430,12 @@ const DBPrenotazioniPage = () => {
                       <TableCell className="px-4 py-3 whitespace-nowrap text-sm">{displayReservationType(entry.reservationType)}</TableCell>
                       <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-right">{entry.totalPrice.toFixed(2)} €</TableCell>
                       <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${entry.isPaid ? 'bg-green-100 text-green-800' : entry.isCancelled ? 'bg-red-200 text-red-800' : 'bg-red-100 text-red-800'}`}>
+                          <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            entry.isPaid ? 'bg-green-100 text-green-800' : 
+                            entry.isCancelled ? 'bg-red-200 text-red-800' : 
+                            entry.isCreatedByAdmin ? 'bg-purple-100 text-purple-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
                               {entry.isPaid ? 'Sì' : 'No'}
                           </span>
                       </TableCell>

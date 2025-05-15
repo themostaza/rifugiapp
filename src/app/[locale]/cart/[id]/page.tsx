@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Check, Download, ArrowRight, Mail, AlertCircle, Info } from 'lucide-react'
+import { Calendar, Check, Download, ArrowRight, Mail, AlertCircle, Info, Clock } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
 import Header from '@/components/header/header'
@@ -115,7 +115,10 @@ export default function ConfirmationPage() {
           ...confirmationTranslations,
           ...commonTranslations,
           cart: cartTranslations,
-          pdf: pdfTranslations
+          pdf: pdfTranslations,
+          pendingPayment: 'Prenotazione in attesa di pagamento',
+          pendingPaymentMessage: 'La tua prenotazione è stata registrata ma è in attesa di pagamento. Completa il pagamento per confermare la prenotazione.',
+          completePayment: 'Completa pagamento'
         });
       } catch (error) {
         console.error("Failed to load translations:", error);
@@ -126,7 +129,10 @@ export default function ConfirmationPage() {
           ...fallbackTranslations.confirmation,
           ...fallbackTranslations.common,
           cart: fallbackTranslations.cart,
-          pdf: fallbackTranslations.pdf
+          pdf: fallbackTranslations.pdf,
+          pendingPayment: 'Prenotazione in attesa di pagamento',
+          pendingPaymentMessage: 'La tua prenotazione è stata registrata ma è in attesa di pagamento. Completa il pagamento per confermare la prenotazione.',
+          completePayment: 'Completa pagamento'
         });
       }
     };
@@ -576,21 +582,41 @@ export default function ConfirmationPage() {
         <Card className=" sm:p-6 max-w-4xl mx-auto border-green-100 shadow-md">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-3 mb-4">
-              <div className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full ${bookingData.isCancelled ? 'bg-red-100' : 'bg-green-100'}`}>
+              <div className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full ${
+                bookingData.isCancelled ? 'bg-red-100' : 
+                (bookingData.isPaid || bookingData.isCreatedByAdmin ? 'bg-green-100' : 'bg-yellow-100')
+              }`}>
                 {bookingData.isCancelled ? (
                   <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
                 ) : (
-                  <Check className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                  bookingData.isPaid || bookingData.isCreatedByAdmin ? (
+                    <Check className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                  ) : (
+                    <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
+                  )
                 )}
               </div>
-              <CardTitle className={`text-xl sm:text-2xl font-bold ${bookingData.isCancelled ? 'text-red-700' : 'text-green-700'}`}>
-                {bookingData.isCancelled ? (translations.cancelled || 'Prenotazione cancellata') : (translations.confirmed || 'Prenotazione confermata!')}
+              <CardTitle className={`text-xl sm:text-2xl font-bold ${
+                bookingData.isCancelled ? 'text-red-700' : 
+                (bookingData.isPaid || bookingData.isCreatedByAdmin ? 'text-green-700' : 'text-yellow-700')
+              }`}>
+                {bookingData.isCancelled 
+                  ? (translations.cancelled || 'Prenotazione cancellata') 
+                  : (bookingData.isPaid || bookingData.isCreatedByAdmin
+                    ? (translations.confirmed || 'Prenotazione confermata!') 
+                    : (translations.pendingPayment || 'Prenotazione in attesa di pagamento')
+                  )
+                }
               </CardTitle>
             </div>
             <CardDescription className="text-sm sm:text-base">
               {bookingData.isCancelled 
                 ? (translations.bookingCancelledMessage || 'La tua prenotazione presso Rifugio Angelo Dibona è stata cancellata.')
-                : (translations.bookingConfirmedMessage || 'La tua prenotazione presso Rifugio Angelo Dibona è stata confermata con successo. Un\'email di conferma è stata inviata al tuo indirizzo email.')}
+                : (bookingData.isPaid || bookingData.isCreatedByAdmin
+                  ? (translations.bookingConfirmedMessage || 'La tua prenotazione presso Rifugio Angelo Dibona è stata confermata con successo. Un\'email di conferma è stata inviata al tuo indirizzo email.')
+                  : (translations.pendingPaymentMessage || 'La tua prenotazione è stata registrata ma è in attesa di pagamento. Completa il pagamento per confermare la prenotazione.')
+                )
+              }
             </CardDescription>
           </CardHeader>
 
@@ -775,40 +801,56 @@ export default function ConfirmationPage() {
                 <div className="bg-blue-50 p-2 sm:p-5 rounded-lg border border-blue-100 space-y-3 sm:space-y-4">
                   <h2 className="text-base sm:text-lg font-semibold text-blue-800">{translations.whatNext || 'Cosa fare ora?'}</h2>
                   
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    <Download className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm sm:text-base text-blue-800">{translations.downloadConfirmation || 'Scarica la conferma della prenotazione'}</p>
-                      <p className="text-xs sm:text-sm text-blue-700">{translations.showOnArrival || 'Potrai mostrarla al tuo arrivo al rifugio.'}</p>
-                      <Button 
-                        variant="link" 
-                        className="h-7 sm:h-8 px-0 text-blue-600 hover:text-blue-800 text-sm sm:text-base"
-                        onClick={handleDownloadPDF}
-                      >
-                        {translations.downloadPDF || 'Scarica PDF'}
-                      </Button>
-                    </div>
-                  </div>
+                  {bookingData.isPaid || bookingData.isCreatedByAdmin ? (
+                    <>
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <Download className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-sm sm:text-base text-blue-800">{translations.downloadConfirmation || 'Scarica la conferma della prenotazione'}</p>
+                          <p className="text-xs sm:text-sm text-blue-700">{translations.showOnArrival || 'Potrai mostrarla al tuo arrivo al rifugio.'}</p>
+                          <Button 
+                            variant="link" 
+                            className="h-7 sm:h-8 px-0 text-blue-600 hover:text-blue-800 text-sm sm:text-base"
+                            onClick={handleDownloadPDF}
+                          >
+                            {translations.downloadPDF || 'Scarica PDF'}
+                          </Button>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm sm:text-base text-blue-800">{translations.checkEmail || 'Controlla la tua email'}</p>
-                      <p className="text-xs sm:text-sm text-blue-700">
-                        {translations.emailSentMessage || 'Ti abbiamo inviato un\'email di conferma con tutti i dettagli della tua prenotazione.'}
-                      </p>
-                    </div>
-                  </div>
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-sm sm:text-base text-blue-800">{translations.checkEmail || 'Controlla la tua email'}</p>
+                          <p className="text-xs sm:text-sm text-blue-700">
+                            {translations.emailSentMessage || 'Ti abbiamo inviato un\'email di conferma con tutti i dettagli della tua prenotazione.'}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm sm:text-base text-blue-800">{translations.prepareForStay || 'Preparati per il tuo soggiorno'}</p>
-                      <p className="text-xs sm:text-sm text-blue-700">
-                        {translations.refugeInfo || 'Il Rifugio Angelo Dibona si trova a 2083m s.l.m. Ti consigliamo di portare abbigliamento adeguato alla montagna.'}
-                      </p>
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-sm sm:text-base text-blue-800">{translations.prepareForStay || 'Preparati per il tuo soggiorno'}</p>
+                          <p className="text-xs sm:text-sm text-blue-700">
+                            {translations.refugeInfo || 'Il Rifugio Angelo Dibona si trova a 2083m s.l.m. Ti consigliamo di portare abbigliamento adeguato alla montagna.'}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-sm sm:text-base text-yellow-800">
+                          {translations.pendingPayment || 'Completa il pagamento per confermare la prenotazione'}
+                        </p>
+                        <p className="text-xs sm:text-sm text-yellow-700 mb-2">
+                          {translations.pendingPaymentMessage || 'La tua prenotazione non è ancora confermata. Completa il pagamento per confermarla.'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <Separator />
@@ -823,8 +865,8 @@ export default function ConfirmationPage() {
                     </Link>
                   </Button>
 
-                  {/* Mostra il pulsante di cancellazione per tutte le prenotazioni non cancellate */}
-                  {isBeforeCheckIn() ? (
+                  {/* Mostra il pulsante di cancellazione SOLO per prenotazioni PAGATE o ADMIN */}
+                  {isBeforeCheckIn() && (bookingData.isPaid || bookingData.isCreatedByAdmin) ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" className="w-full sm:w-auto px-8">
