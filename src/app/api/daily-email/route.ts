@@ -14,6 +14,7 @@ interface Room {
   id: number;
   description: string | null;
   RoomLinkBed: { count: number }[] | null;
+  order?: number | null;
 }
 
 interface RoomLinkBed {
@@ -99,22 +100,24 @@ const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#ffffff',
-    padding: 20,
+    padding: 0,
     fontSize: 10,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 2,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   title: {
-    fontSize: 12,
+    fontSize: 8,
     fontWeight: 'bold',
     marginRight: 10,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize:8,
     color: '#666666',
   },
   noData: {
@@ -177,7 +180,7 @@ const styles = StyleSheet.create({
   table: {
     width: 'auto',
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRightWidth: 0,
     borderBottomWidth: 0,
   },
@@ -187,43 +190,43 @@ const styles = StyleSheet.create({
   },
   tableColHeader: {
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderLeftWidth: 0,
     borderTopWidth: 0,
     backgroundColor: '#f2f2f2',
-    padding: 4,
+    padding: 1,
   },
   tableCol: {
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-    padding: 4,
+    padding: 1,
   },
   roomCol: {
     width: '25%',
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-    padding: 4,
+    padding: 1,
     backgroundColor: '#fafafa',
   },
   bedCol: {
     width: '35%',
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-    padding: 4,
+    padding: 1,
   },
   statusCol: {
     width: '40%',
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-    padding: 4,
+    padding: 1,
   },
   tableCellHeader: {
     margin: 'auto',
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   roomInfo: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: 'bold',
     marginBottom: 2,
   },
@@ -265,6 +268,18 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: '#008000',
     fontWeight: 'bold',
+  },
+  summaryInline: {
+    fontSize: 8,
+    color: '#333',
+    marginLeft: 8,
+    fontWeight: 'normal',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 2,
   },
 });
 
@@ -303,7 +318,7 @@ async function fetchDayDetails(supabase: SupabaseClient, dateString: string): Pr
             GuestDivision ( id, title, description ),
             RoomLinkBed (
               id, name,
-              Room ( id, description, RoomLinkBed(count) )
+              Room ( id, description, RoomLinkBed(count), "order" )
             )
           )
         )
@@ -461,7 +476,7 @@ async function fetchDayDetails(supabase: SupabaseClient, dateString: string): Pr
     // Calcolo availableBeds (come prima)
     const { data: roomsData } = await supabase
       .from('Room')
-      .select('id, RoomLinkBed(count)');
+      .select('id, RoomLinkBed(count), "order"');
     let totalCapacity = 0;
     if (roomsData) {
       totalCapacity = (roomsData as { RoomLinkBed: { count: number }[] }[]).reduce((sum: number, room) => {
@@ -501,6 +516,7 @@ function calculateRoomOccupancySummaryAndBedStatuses(dayDetails: DayDetailsRespo
       booked: { adults: number; children: number; infants: number };
       totalBooked: number;
       blockedCount: number;
+      order?: number | null;
     };
   };
 
@@ -520,6 +536,7 @@ function calculateRoomOccupancySummaryAndBedStatuses(dayDetails: DayDetailsRespo
               booked: { adults: 0, children: 0, infants: 0 },
               totalBooked: 0,
               blockedCount: blockedBedsByRoom[room.id] || 0,
+              order: room.order ?? null,
             };
           }
           const divisionTitle = guestDivision?.title?.toLowerCase() || '';
@@ -535,7 +552,13 @@ function calculateRoomOccupancySummaryAndBedStatuses(dayDetails: DayDetailsRespo
       });
     });
   });
-  const roomOccupancySummary = Object.values(occupancy).sort((a, b) => a.id - b.id);
+  const roomOccupancySummary = Object.values(occupancy).sort((a, b) => {
+    // Sort by order (nulls last), then by id
+    if (a.order == null && b.order == null) return a.id - b.id;
+    if (a.order == null) return 1;
+    if (b.order == null) return -1;
+    return a.order - b.order;
+  });
 
   // 2. Bed Statuses By Room
   const statuses: { [roomId: number]: BedStatus[] } = {};
@@ -796,36 +819,27 @@ async function generateBedDetailsPdf(date: Date, dayDetails: DayDetailsResponse,
     const totalBookedBeds = roomOccupancySummary.reduce((sum, room) => sum + room.totalBooked, 0);
     const occupiedBeds = totalBookedBeds + (dayDetails.totalBlockedBeds ?? 0);
     const freeBeds = dayDetails.availableBeds ?? (totalCapacity - occupiedBeds);
-    // Create PDF document
-    const BedDetailsDocument = React.createElement(Document, {},
-      React.createElement(Page, { size: 'A4', style: styles.page },
-        // Header
+
+    // Split rooms in groups of 5
+    const roomChunks: typeof roomOccupancySummary[] = [];
+    for (let i = 0; i < roomOccupancySummary.length; i += 5) {
+      roomChunks.push(roomOccupancySummary.slice(i, i + 5));
+    }
+
+    // Helper to render a page with up to 5 rooms
+    function renderPage(rooms: typeof roomOccupancySummary) {
+      return React.createElement(Page, { size: 'A4', style: styles.page },
+        // Header with title and summary on the same row
         React.createElement(View, { style: styles.header },
           React.createElement(Text, { style: styles.title }, 'Dettaglio Giornaliero'),
-          React.createElement(Text, { style: styles.subtitle }, formattedDate)
-        ),
-        // Compact Summary in header style
-        React.createElement(View, { style: styles.compactHeaderRow },
-          React.createElement(Text, { style: styles.compactHeaderText },
+          React.createElement(Text, { style: styles.summaryInline },
             `Tot: ${totalCapacity} | Liberi: ${freeBeds} | Occupati: ${occupiedBeds} | Ospiti: ${totalGuests}`
-          )
+          ),
+          React.createElement(Text, { style: styles.subtitle }, formattedDate)
         ),
         // Room Layout Table
         React.createElement(View, { style: styles.table },
-          // Header row
-          React.createElement(View, { style: styles.tableRow },
-            React.createElement(View, { style: [styles.tableColHeader, { width: '25%' }] },
-              React.createElement(Text, { style: styles.tableCellHeader }, 'Stanza')
-            ),
-            React.createElement(View, { style: [styles.tableColHeader, { width: '35%' }] },
-              React.createElement(Text, { style: styles.tableCellHeader }, 'Letto')
-            ),
-            React.createElement(View, { style: [styles.tableColHeader, { width: '40%' }] },
-              React.createElement(Text, { style: styles.tableCellHeader }, 'Stato / Dettagli')
-            )
-          ),
-          // Generate detailed room data based on real bedStatusesByRoom
-          ...roomOccupancySummary.flatMap(room => {
+          ...rooms.flatMap(room => {
             const beds = bedStatusesByRoom[room.id] || [];
             if (beds.length === 0) {
               return [
@@ -847,9 +861,7 @@ async function generateBedDetailsPdf(date: Date, dayDetails: DayDetailsResponse,
               const isFirstBedOfRoom = bedIndex === 0;
               let statusNode: React.ReactElement;
               let extraServices: { description: string; quantity: number }[] = [];
-              // Trova i servizi extra associati a questo letto prenotato
               if (bed.status === 'booked' && bed.bookedBy) {
-                // Trova la RoomReservation corrispondente SOLO se bed.bookedBy è definito
                 const reservation = dayDetails.detailedReservations.find(res => res.id === bed.bookedBy?.reservationId);
                 let foundExtra: { description: string; quantity: number }[] = [];
                 if (reservation && reservation.RoomReservation) {
@@ -877,12 +889,12 @@ async function generateBedDetailsPdf(date: Date, dayDetails: DayDetailsResponse,
               } else if (bed.status === 'booked' && bed.bookedBy) {
                 statusNode = React.createElement(View, {},
                   React.createElement(Text, { style: styles.prenText }, `Pren. #${bed.bookedBy.reservationId}: ${bed.bookedBy.name || ''} ${(bed.bookedBy.surname || '').substring(0, 8)}`),
-                  React.createElement(Text, { style: styles.statusDetail }, `Tipo: ${bed.bookedBy.guestType || 'N/A'} Tel: ${(bed.bookedBy.phone || '').substring(0, 10)}`),
-                  // Mostra extraServices se presenti
-                  extraServices && extraServices.length > 0 ?
-                    React.createElement(Text, { style: styles.statusDetail },
-                      `Extra: ${extraServices.map(es => `${es.description} x${es.quantity}`).join(', ')}`
-                    ) : null
+                  React.createElement(View, { style: styles.statusRow },
+                    React.createElement(Text, { style: styles.statusDetail }, `Tipo: ${bed.bookedBy.guestType || 'N/A'}`),
+                    extraServices && extraServices.length > 0 ?
+                      React.createElement(Text, { style: styles.statusDetail }, `  Extra: ${extraServices.map(es => `${es.description} x${es.quantity}`).join(', ')}`)
+                      : null
+                  )
                 );
               } else {
                 statusNode = React.createElement(Text, { style: styles.prenText }, 'Prenotato');
@@ -900,7 +912,11 @@ async function generateBedDetailsPdf(date: Date, dayDetails: DayDetailsResponse,
             });
           })
         )
-      )
+      );
+    }
+
+    const BedDetailsDocument = React.createElement(Document, {},
+      ...roomChunks.map(renderPage)
     );
     const pdfBuffer = await renderToBuffer(BedDetailsDocument);
     console.log('[daily-email] Bed details PDF generated, size:', pdfBuffer.length);
@@ -1135,7 +1151,7 @@ export async function GET(request: NextRequest) {
 
     // Recipients of the daily report
     const recipients = ['rifugiodibona@gmail.com', 'paolo@larin.it'];
-    //const recipients = [ 'paolo@larin.it'];
+    // const recipients = [ 'paolo@larin.it'];
     
     console.log('[daily-email] Sending emails with PDF attachments using Resend directly...');
     console.log('[daily-email] Email payload attachments:', {
