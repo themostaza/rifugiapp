@@ -786,7 +786,13 @@ export default function BookingPage() {
                 
               <Button 
                 className="w-full bg-gray-900 hover:bg-gray-800 text-white" 
-                disabled={!checkIn || !checkOut || totalGuests === 0 || isSearching}
+                disabled={
+                  !checkIn ||
+                  !checkOut ||
+                  totalGuests === 0 ||
+                  isSearching ||
+                  (checkIn && checkOut && checkIn.getTime() === checkOut.getTime())
+                }
                 onClick={handleSearch}
               >
                 {isSearching ? (
