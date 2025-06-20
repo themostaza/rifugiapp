@@ -1134,8 +1134,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Recipients of the daily report
-    //const recipients = ['rifugiodibona@gmail.com', 'paolo@larin.it'];
-    const recipients = [ 'paolo@larin.it'];
+    const recipients = ['rifugiodibona@gmail.com', 'paolo@larin.it'];
+    //const recipients = [ 'paolo@larin.it'];
     
     console.log('[daily-email] Sending emails with PDF attachments using Resend directly...');
     console.log('[daily-email] Email payload attachments:', {
