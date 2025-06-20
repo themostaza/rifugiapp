@@ -436,6 +436,7 @@ export default function BookingPage() {
 
       const response = await fetch(`/api/search?${searchParams}`);
       const data: SearchResponse = await response.json();
+      console.log('🔎 Risposta API /api/search:', data, 'reason:', data?.reason);
 
       if (data.guestTypes) {
         setGuestTypes(data.guestTypes);
@@ -475,9 +476,14 @@ export default function BookingPage() {
         });
 
         const bookingHoldData = await bookingHoldResponse.json();
+        console.log('🔎 Risposta API /api/booking-hold:', bookingHoldData, 'reason:', bookingHoldData?.reason);
 
         if (!bookingHoldData.available) {
-          setSearchError(bookingHoldData.reason);
+          setSearchError(
+            bookingHoldData.reason === 'BOOKING_IN_PROGRESS'
+              ? 'booking_in_progress'
+              : bookingHoldData.reason?.toLowerCase() || 'unknown_error'
+          );
           setShowResults(false);
           return;
         }
