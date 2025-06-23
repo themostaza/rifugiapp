@@ -126,6 +126,7 @@ interface RoomListProps {
   }>;
   onProceedToCheckout: () => void;
   onBlockedBedsChange: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
+  calculateTotalPrice: () => { total: number; cityTaxTotal: number };
 }
 
 const RoomList: React.FC<RoomListProps> = ({ 
@@ -141,7 +142,8 @@ const RoomList: React.FC<RoomListProps> = ({
   guestTypes,
   onPrivacyCostChange,
   onProceedToCheckout,
-  onBlockedBedsChange
+  onBlockedBedsChange,
+  calculateTotalPrice
 }) => {
   
 
@@ -267,9 +269,12 @@ const RoomList: React.FC<RoomListProps> = ({
       <div className='flex justify-end items-center'>
         <Button
           className="bg-gray-900 hover:bg-gray-700"
-          disabled={getUnassignedGuests().adults > 0 || 
-                   getUnassignedGuests().children > 0 || 
-                   getUnassignedGuests().infants > 0}
+          disabled={
+            getUnassignedGuests().adults > 0 || 
+            getUnassignedGuests().children > 0 || 
+            getUnassignedGuests().infants > 0 ||
+            calculateTotalPrice().total <= 0
+          }
           onClick={onProceedToCheckout}
         >
           Prosegui l&apos;acquisto
@@ -892,6 +897,7 @@ export default function BookingPage() {
                 onPrivacyCostChange={handlePrivacyCostChange}
                 onProceedToCheckout={handleProceedToCheckout}
                 onBlockedBedsChange={handleBlockedBedsChange}
+                calculateTotalPrice={calculateTotalPrice}
               />
             </Card>
           )}
