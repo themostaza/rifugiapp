@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { format } from 'date-fns'
-import { it } from 'date-fns/locale'
+import { it, enUS, fr, de, es, Locale } from 'date-fns/locale'
 import RoomContent from '../components/roomcontent'
 import Cart from '../components/cart'
 import Footer from '@/components/footer/footer'
@@ -22,6 +22,12 @@ import {
 } from '@/app/utils/pricing';
 import CheckoutPage from '../components/checkout/checkout'
 import { formatDateForAPI } from '@/app/utils/dateUtils'; // Import from new location
+import itMessages from '../../../messages/it.json';
+import enMessages from '../../../messages/en.json';
+import frMessages from '../../../messages/fr.json';
+import deMessages from '../../../messages/de.json';
+import esMessages from '../../../messages/es.json';
+import { usePathname } from 'next/navigation';
 
 
 // Types
@@ -129,7 +135,20 @@ interface RoomListProps {
   calculateTotalPrice: () => { total: number; cityTaxTotal: number };
 }
 
-const RoomList: React.FC<RoomListProps> = ({ 
+type SupportedLang = 'it' | 'en' | 'fr' | 'de' | 'es';
+type Messages = Record<string, unknown>;
+const translations: Record<SupportedLang, Messages> = {
+  it: itMessages as Messages,
+  en: enMessages as Messages,
+  fr: frMessages as Messages,
+  de: deMessages as Messages,
+  es: esMessages as Messages,
+};
+function getMessages(lang: string): Messages {
+  return translations[(lang as SupportedLang)] || translations['it'];
+}
+
+const RoomList: React.FC<RoomListProps & { t: (key: string) => string }> = ({ 
   rooms,
   onSelect, 
   totalGuests, 
@@ -143,7 +162,8 @@ const RoomList: React.FC<RoomListProps> = ({
   onPrivacyCostChange,
   onProceedToCheckout,
   onBlockedBedsChange,
-  calculateTotalPrice
+  calculateTotalPrice,
+  t
 }) => {
   
 
@@ -182,11 +202,11 @@ const RoomList: React.FC<RoomListProps> = ({
   return (
     <div className="space-y-4">
       <div className="bg-gray-100 p-4 rounded-lg mb-4">
-        <h3 className="font-semibold mb-2">Ospiti da assegnare:</h3>
+        <h3 className="font-semibold mb-2">{t('booking.guestsToAssign') || 'Ospiti da assegnare:'}</h3>
         <div className="flex gap-4">
-          <span>Adulti: {getUnassignedGuests().adults}</span>
-          <span>Bambini: {getUnassignedGuests().children}</span>
-          <span>Neonati: {getUnassignedGuests().infants}</span>
+          <span>{t('booking.adults') || 'Adulti'}: {getUnassignedGuests().adults}</span>
+          <span>{t('booking.children') || 'Bambini'}: {getUnassignedGuests().children}</span>
+          <span>{t('booking.infants') || 'Neonati'}: {getUnassignedGuests().infants}</span>
         </div>
       </div>
       
@@ -262,8 +282,8 @@ const RoomList: React.FC<RoomListProps> = ({
       </Accordion>
       
       <div className="text-sm text-gray-600 mt-6">
-        <p>Se questa soluzione funziona per te, clicca sul pulsante &apos;Prosegui l&apos;acquisto&apos;.</p>
-        <p>Hai domande? Puoi contattare il gestore al numero +39 0436 860294 / +39 333 143 4408 oppure inviando una mail a rifugiodibona@gmail.com.</p>
+        <p>{t('booking.infoProceed')}</p>
+        <p>{t('booking.infoContact')}</p>
       </div>
       
       <div className='flex justify-end items-center'>
@@ -277,7 +297,7 @@ const RoomList: React.FC<RoomListProps> = ({
           }
           onClick={onProceedToCheckout}
         >
-          Prosegui l&apos;acquisto
+          {t('booking.proceedToCheckout') || "Prosegui l'acquisto"}
         </Button>
       </div>
     </div>
@@ -292,7 +312,6 @@ export default function BookingPage() {
   const [adults, setAdults] = useState(1)
   const [children, setChildren] = useState(0)
   const [infants, setInfants] = useState(0)
-  const [language, setLanguage] = useState('it')
   const [showResults, setShowResults] = useState(false)
   const [pensionType, setPensionType] = useState<'bb' | 'hb'>('hb')
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -316,7 +335,43 @@ export default function BookingPage() {
 
   const today = useMemo(() => new Date(), []);
 
-  
+  const pathname = usePathname();
+  // Estrai la lingua dal path, fallback a 'it'
+  const detectedLang = pathname?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || 'it';
+  const [language, setLanguage] = useState(detectedLang);
+
+  useEffect(() => {
+    setLanguage(detectedLang);
+  }, [detectedLang]);
+
+  const messages = useMemo(() => getMessages(language), [language]);
+  const t = useCallback((key: string): string => {
+    const parts = key.split('.');
+    let value: unknown = messages;
+    for (const part of parts) {
+      if (typeof value === 'object' && value !== null && part in value) {
+        value = (value as Record<string, unknown>)[part];
+      } else {
+        value = undefined;
+        break;
+      }
+    }
+    if (typeof value === 'string') {
+      return value;
+    } else {
+      let fallback: unknown = itMessages;
+      for (const part of parts) {
+        if (typeof fallback === 'object' && fallback !== null && part in fallback) {
+          fallback = (fallback as Record<string, unknown>)[part];
+        } else {
+          fallback = undefined;
+          break;
+        }
+      }
+      return typeof fallback === 'string' ? fallback : key;
+    }
+  }, [messages]);
+
   // Handler per ricevere i dati dettagliati dei letti bloccati da RoomContent
   const handleBlockedBedsChange = useCallback((roomId: number, blockedBedsData: { [date: string]: number[] }) => {
     setAllBlockedBeds(prev => ({
@@ -351,8 +406,8 @@ export default function BookingPage() {
   }
 
   const getTotalGuests = () => {
-    const total = adults + children + infants
-    return `${total} ospit${total === 1 ? 'e' : 'i'}`
+    const totalGuestsCount = adults + children + infants;
+    return `${totalGuestsCount} ${totalGuestsCount === 1 ? t('booking.guestSingular') : t('booking.guestPlural')}`;
   }
 
   const handleGuestChange = (type: 'adults' | 'children' | 'infants', operation: 'add' | 'subtract') => {
@@ -585,20 +640,19 @@ export default function BookingPage() {
   };
 
   const GuestCounter = ({ 
-    title, 
-    subtitle, 
     value, 
     type 
   }: { 
-    title: string;
-    subtitle: string;
     value: number;
     type: 'adults' | 'children' | 'infants';
   }) => (
     <div className="flex items-center justify-between py-4">
       <div>
-        <div className="font-medium">{title}</div>
-        <div className="text-sm text-gray-500">{subtitle}</div>
+        <div className="font-medium">{
+          type === 'adults' ? t('booking.adultsLabel') :
+          type === 'children' ? t('booking.childrenLabel') :
+          t('booking.infantsLabel')
+        }</div>
       </div>
       <div className="flex items-center gap-3">
         <Button
@@ -624,6 +678,15 @@ export default function BookingPage() {
   );
 
   const totalGuests = adults + children + infants;
+
+  // Mappa per react-day-picker
+  const calendarLocales: Record<string, Locale> = {
+    it: it,
+    en: enUS,
+    fr: fr,
+    de: de,
+    es: es,
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -705,7 +768,7 @@ export default function BookingPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date del soggiorno (checkin - checkout)
+                  {t('booking.datesLabel')}
                 </label>
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
@@ -717,14 +780,14 @@ export default function BookingPage() {
                       {checkIn ? (
                         checkOut ? (
                           <>
-                            {format(checkIn, 'd MMM yyyy', { locale: it })} - 
-                            {format(checkOut, 'd MMM yyyy', { locale: it })}
+                            {format(checkIn, 'd MMM yyyy', { locale: calendarLocales[language] || it })} - 
+                            {format(checkOut, 'd MMM yyyy', { locale: calendarLocales[language] || it })}
                           </>
                         ) : (
-                          format(checkIn, 'd MMM yyyy', { locale: it })
+                          format(checkIn, 'd MMM yyyy', { locale: calendarLocales[language] || it })
                         )
                       ) : (
-                        "Seleziona le date"
+                        t('booking.selectDates')
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -737,17 +800,12 @@ export default function BookingPage() {
                         to: checkOut
                       }}
                       onSelect={(range) => {
-                        // Directly use the range from react-day-picker
                         setCheckIn(range?.from);
                         setCheckOut(range?.to);
-                        // Remove automatic closing of the popover
-                        // if (range?.from && range?.to) {
-                        //   setCalendarOpen(false);
-                        // }
                       }}
                       numberOfMonths={1}
                       disabled={(date) => date < today}
-                      locale={it}
+                      locale={calendarLocales[language] || it}
                     />
                   </PopoverContent>
                 </Popover>
@@ -755,7 +813,7 @@ export default function BookingPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ospiti
+                  {t('booking.guestsLabel')}
                 </label>
                 <Popover open={guestsOpen} onOpenChange={setGuestsOpen}>
                   <PopoverTrigger asChild>
@@ -771,20 +829,14 @@ export default function BookingPage() {
                   <PopoverContent className="w-[280px] sm:w-80">
                     <div className="px-1 divide-y">
                       <GuestCounter
-                        title="Adulti"
-                        subtitle="13+ anni"
                         value={adults}
                         type="adults"
                       />
                       <GuestCounter
-                        title="Bambini"
-                        subtitle="2-12 anni"
                         value={children}
                         type="children"
                       />
                       <GuestCounter
-                        title="Neonati"
-                        subtitle="0-2 anni"
                         value={infants}
                         type="infants"
                       />
@@ -811,7 +863,7 @@ export default function BookingPage() {
                 ) : (
                   <Search className="h-4 w-4 mr-2"/>
                 )}
-                {isSearching ? 'Cerco...' : 'Cerca'}
+                {isSearching ? t('booking.searching') : t('booking.search')}
               </Button>
               </div>
             </div>
@@ -857,9 +909,9 @@ export default function BookingPage() {
             <Card className="mt-4 sm:mt-0 sm:p-6 max-w-4xl mx-auto border-0 shadow-none sm:border sm:shadow">
               <div className="mb-4">
                 <p className="mb-3 text-gray-700 text-sm sm:text-base">
-                  <span>1. Seleziona la modalità di pernottamento tra le seguenti:</span><br/>
-                  <span className="">• <strong>Mezza Pensione</strong>: include la cena e la colazione</span><br/>
-                  <span className="">• <strong>Bed & Breakfast</strong>: include solo la colazione</span>
+                  <span dangerouslySetInnerHTML={{__html: t('booking.step1')}}></span><br/>
+                  <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_hb')}}></span><br/>
+                  <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_bb')}}></span>
                 </p>
                 <Select 
                   value={pensionType} 
@@ -870,15 +922,15 @@ export default function BookingPage() {
                   }}
                 >
                   <SelectTrigger className="w-full sm:w-auto">
-                    <SelectValue placeholder="Seleziona trattamento" />
+                    <SelectValue placeholder={t('booking.selectTreatment')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="bb">Bed & Breakfast</SelectItem>
-                    <SelectItem value="hb">Mezza Pensione</SelectItem>
+                    <SelectItem value="hb">{language === 'it' ? 'Mezza Pensione' : language === 'en' ? 'Half Board' : language === 'fr' ? 'Demi-pension' : language === 'de' ? 'Halbpension' : language === 'es' ? 'Media pensión' : 'Mezza Pensione'}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <span className="text-sm sm:text-base">2. Seleziona un letto per ciascun ospite.</span>
+              <span className="text-sm sm:text-base">{t('booking.step2')}</span>
               <RoomList 
                 rooms={rooms}
                 onSelect={handleRoomSelect}
@@ -898,6 +950,7 @@ export default function BookingPage() {
                 onProceedToCheckout={handleProceedToCheckout}
                 onBlockedBedsChange={handleBlockedBedsChange}
                 calculateTotalPrice={calculateTotalPrice}
+                t={t}
               />
             </Card>
           )}
