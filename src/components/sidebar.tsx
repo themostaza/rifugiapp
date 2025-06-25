@@ -95,6 +95,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
         icon: <FileText className="h-5 w-5" />,  
         href: '/admin_power/report' 
     },
+    {
+      name: 'Stripe Check',
+      icon: <ExternalLink className="h-5 w-5" />,  
+      href: '/stripe_check',
+    },
     { 
         name: 'Vai a Stripe',
         icon: <ExternalLink className="h-5 w-5" />,
