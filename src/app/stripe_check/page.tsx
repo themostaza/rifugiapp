@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { supabase } from '@/lib/supabase';
 
 // Tipi per la risposta di verifica
 interface StripeLogMeta {
@@ -10,6 +11,8 @@ interface StripeLogMeta {
   billing_details?: { email?: string };
   receipt_email?: string;
   id?: string;
+  dispute?: boolean;
+  solved?: boolean;
 }
 
 interface StripeLogEntry {
@@ -18,6 +21,7 @@ interface StripeLogEntry {
   meta: StripeLogMeta | null;
   status: string;
   transaction_type: string;
+  solved?: boolean;
 }
 
 interface VerifyResult {
@@ -157,6 +161,8 @@ export default function StripeSyncPage() {
                         <th>Importo</th>
                         <th>Data</th>
                         <th>Match Basket</th>
+                        <th>Info</th>
+                        <th>Risolto</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -169,8 +175,31 @@ export default function StripeSyncPage() {
                           <td>{row.meta?.payment_intent || '-'}</td>
                           <td>{getBasketId((row.meta?.payment_intent || '').trim())}</td>
                           <td>{row.meta?.amount ? (row.meta.amount / 100).toFixed(2) + ' €' : '-'}</td>
-                          <td>{row.meta?.created ? new Date(row.meta.created * 1000).toLocaleString() : '-'}</td>
+                          <td>{row.meta?.created ? formatDateIT(row.meta.created) : '-'}</td>
                           <td>✔️</td>
+                          <td>{row.meta?.dispute ? <span style={{background:'#ff5252',color:'#fff',padding:'2px 8px',borderRadius:6,fontWeight:600,fontSize:12}}>dispute</span> : null}</td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={!!row.solved}
+                              onChange={async (e) => {
+                                const newSolved = e.target.checked;
+                                // Aggiorna direttamente con Supabase
+                                await supabase
+                                  .from('Stripe_log')
+                                  .update({ solved: newSolved })
+                                  .eq('id', row.id);
+                                // Aggiorna lo stato locale per riflettere subito la modifica
+                                setVerifyResult((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    matches: prev.matches.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                  };
+                                });
+                              }}
+                            />
+                          </td>
                         </tr>
                       ))}
                       {verifyResult.missing && verifyResult.missing.map((row, i) => (
@@ -182,8 +211,31 @@ export default function StripeSyncPage() {
                           <td>{row.meta?.payment_intent || '-'}</td>
                           <td>-</td>
                           <td>{row.meta?.amount ? (row.meta.amount / 100).toFixed(2) + ' €' : '-'}</td>
-                          <td>{row.meta?.created ? new Date(row.meta.created * 1000).toLocaleString() : '-'}</td>
+                          <td>{row.meta?.created ? formatDateIT(row.meta.created) : '-'}</td>
                           <td>❌</td>
+                          <td>{row.meta?.dispute ? <span style={{background:'#ff5252',color:'#fff',padding:'2px 8px',borderRadius:6,fontWeight:600,fontSize:12}}>dispute</span> : null}</td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={!!row.solved}
+                              onChange={async (e) => {
+                                const newSolved = e.target.checked;
+                                // Aggiorna direttamente con Supabase
+                                await supabase
+                                  .from('Stripe_log')
+                                  .update({ solved: newSolved })
+                                  .eq('id', row.id);
+                                // Aggiorna lo stato locale per riflettere subito la modifica
+                                setVerifyResult((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    missing: prev.missing.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                  };
+                                });
+                              }}
+                            />
+                          </td>
                         </tr>
                       ))}
                       {verifyResult.noPaymentIntent && verifyResult.noPaymentIntent.map((row, i) => (
@@ -195,8 +247,31 @@ export default function StripeSyncPage() {
                           <td>-</td>
                           <td>-</td>
                           <td>{row.meta?.amount ? (row.meta.amount / 100).toFixed(2) + ' €' : '-'}</td>
-                          <td>{row.meta?.created ? new Date(row.meta.created * 1000).toLocaleString() : '-'}</td>
+                          <td>{row.meta?.created ? formatDateIT(row.meta.created) : '-'}</td>
                           <td>-</td>
+                          <td>{row.meta?.dispute ? <span style={{background:'#ff5252',color:'#fff',padding:'2px 8px',borderRadius:6,fontWeight:600,fontSize:12}}>dispute</span> : null}</td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={!!row.solved}
+                              onChange={async (e) => {
+                                const newSolved = e.target.checked;
+                                // Aggiorna direttamente con Supabase
+                                await supabase
+                                  .from('Stripe_log')
+                                  .update({ solved: newSolved })
+                                  .eq('id', row.id);
+                                // Aggiorna lo stato locale per riflettere subito la modifica
+                                setVerifyResult((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    noPaymentIntent: prev.noPaymentIntent.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                  };
+                                });
+                              }}
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -217,15 +292,40 @@ export default function StripeSyncPage() {
                         <th>Mail</th>
                         <th>Ammontare</th>
                         <th>Data</th>
+                        <th>Info</th>
+                        <th>Risolto</th>
                       </tr>
                     </thead>
                     <tbody>
                       {verifyResult.missing.map((row, i) => (
-                        <tr key={row.meta?.id || i}>
+                        <tr key={row.meta?.id || i} style={row.solved ? { opacity: 0.5 } : {}}>
                           <td>{row.meta?.payment_intent || '-'}</td>
                           <td>{row.meta?.billing_details?.email || row.meta?.receipt_email || '-'}</td>
                           <td>{row.meta?.amount ? (row.meta.amount / 100).toFixed(2) + ' €' : '-'}</td>
-                          <td>{row.meta?.created ? new Date(row.meta.created * 1000).toLocaleString() : '-'}</td>
+                          <td>{row.meta?.created ? formatDateIT(row.meta.created) : '-'}</td>
+                          <td>{row.meta?.dispute ? <span style={{background:'#ff5252',color:'#fff',padding:'2px 8px',borderRadius:6,fontWeight:600,fontSize:12}}>dispute</span> : null}</td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={!!row.solved}
+                              onChange={async (e) => {
+                                const newSolved = e.target.checked;
+                                // Aggiorna direttamente con Supabase
+                                await supabase
+                                  .from('Stripe_log')
+                                  .update({ solved: newSolved })
+                                  .eq('id', row.id);
+                                // Aggiorna lo stato locale per riflettere subito la modifica
+                                setVerifyResult((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    missing: prev.missing.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                  };
+                                });
+                              }}
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -238,4 +338,12 @@ export default function StripeSyncPage() {
       )}
     </div>
   );
+}
+
+function formatDateIT(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = date.toLocaleString('it-IT', { month: 'short' });
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
 }
