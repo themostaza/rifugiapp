@@ -19,6 +19,7 @@ interface StripeLogEntry {
   meta: StripeLogMeta | null;
   status: string;
   transaction_type: string;
+  solved: boolean;
 }
 
 // Funzione per fetchare tutti i record da una tabella Supabase con paginazione
@@ -55,7 +56,7 @@ async function fetchAllRows<T>(table: Table, columns: string): Promise<T[]> {
 export async function GET() {
   try {
     // Prendi tutte le transazioni Stripe_log (nessun filtro, con paginazione)
-    const stripeLogs = await fetchAllRows<StripeLogEntry>(Table.StripeLog, 'id, stripe_id, meta, status, transaction_type');
+    const stripeLogs = await fetchAllRows<StripeLogEntry>(Table.StripeLog, 'id, stripe_id, meta, status, transaction_type, solved');
 
     // Prendi tutti i paymentIntentId già presenti in Basket (con paginazione)
     const basketRows = await fetchAllRows<BasketEntry>(Table.Basket, 'id, paymentIntentId');

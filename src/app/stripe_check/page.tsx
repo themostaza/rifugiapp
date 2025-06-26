@@ -297,37 +297,40 @@ export default function StripeSyncPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {verifyResult.missing.map((row, i) => (
-                        <tr key={row.meta?.id || i} style={row.solved ? { opacity: 0.5 } : {}}>
-                          <td>{row.meta?.payment_intent || '-'}</td>
-                          <td>{row.meta?.billing_details?.email || row.meta?.receipt_email || '-'}</td>
-                          <td>{row.meta?.amount ? (row.meta.amount / 100).toFixed(2) + ' €' : '-'}</td>
-                          <td>{row.meta?.created ? formatDateIT(row.meta.created) : '-'}</td>
-                          <td>{row.meta?.dispute ? <span style={{background:'#ff5252',color:'#fff',padding:'2px 8px',borderRadius:6,fontWeight:600,fontSize:12}}>dispute</span> : null}</td>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={!!row.solved}
-                              onChange={async (e) => {
-                                const newSolved = e.target.checked;
-                                // Aggiorna direttamente con Supabase
-                                await supabase
-                                  .from('Stripe_log')
-                                  .update({ solved: newSolved })
-                                  .eq('id', row.id);
-                                // Aggiorna lo stato locale per riflettere subito la modifica
-                                setVerifyResult((prev) => {
-                                  if (!prev) return prev;
-                                  return {
-                                    ...prev,
-                                    missing: prev.missing.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
-                                  };
-                                });
-                              }}
-                            />
-                          </td>
-                        </tr>
-                      ))}
+                      {verifyResult.missing
+                        .slice() // copia per non mutare l'array originale
+                        .sort((a, b) => (b.meta?.created || 0) - (a.meta?.created || 0))
+                        .map((row, i) => (
+                          <tr key={row.meta?.id || i} style={row.solved ? { opacity: 0.5 } : {}}>
+                            <td>{row.meta?.payment_intent || '-'}</td>
+                            <td>{row.meta?.billing_details?.email || row.meta?.receipt_email || '-'}</td>
+                            <td>{row.meta?.amount ? (row.meta.amount / 100).toFixed(2) + ' €' : '-'}</td>
+                            <td>{row.meta?.created ? formatDateIT(row.meta.created) : '-'}</td>
+                            <td>{row.meta?.dispute ? <span style={{background:'#ff5252',color:'#fff',padding:'2px 8px',borderRadius:6,fontWeight:600,fontSize:12}}>dispute</span> : null}</td>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={!!row.solved}
+                                onChange={async (e) => {
+                                  const newSolved = e.target.checked;
+                                  // Aggiorna direttamente con Supabase
+                                  await supabase
+                                    .from('Stripe_log')
+                                    .update({ solved: newSolved })
+                                    .eq('id', row.id);
+                                  // Aggiorna lo stato locale per riflettere subito la modifica
+                                  setVerifyResult((prev) => {
+                                    if (!prev) return prev;
+                                    return {
+                                      ...prev,
+                                      missing: prev.missing.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                    };
+                                  });
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
