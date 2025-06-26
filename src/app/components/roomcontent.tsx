@@ -81,6 +81,7 @@ interface RoomContentProps {
     cityTaxPrice: number;
   }>;
   onBlockedBedsChange?: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
+  blockedBedsForRoom?: { [date: string]: number[] };
   t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
@@ -318,6 +319,7 @@ const RoomContent = ({
   onPrivacyCostChange,
   guestTypes,
   onBlockedBedsChange,
+  blockedBedsForRoom = {},
   t
 }: RoomContentProps) => {
   // State per tracciare i letti bloccati dall'utente per migliorare la privacy
@@ -328,8 +330,15 @@ const RoomContent = ({
     .filter(guest => guest.bedId)
     .map(guest => guest.bedId);
 
-  // Calculate available bed IDs
-  const availableBedIds = allBedIds.filter(bedId => !usedBedIds.includes(bedId));
+  // Ottieni tutti i letti bloccati per almeno una notte
+  const blockedBedIds = Object.values(blockedBedsForRoom)
+    .flat()
+    .map(id => id.toString());
+
+  // Calcola availableBedIds escludendo sia quelli assegnati che quelli bloccati
+  const availableBedIds = allBedIds.filter(
+    bedId => !usedBedIds.includes(bedId) && !blockedBedIds.includes(bedId)
+  );
 
   const handleAddGuest = (guestType: 'adult' | 'child' | 'infant') => {
     const newGuest: Guest = {
@@ -347,6 +356,21 @@ const RoomContent = ({
       bedId: bedId.toString()
     };
     onGuestAssignment(updatedGuests);
+
+    // --- Sincronizza: se il letto era bloccato, rimuovilo dai blocchi ---
+    if (onBlockedBedsChange && blockedBedsForRoom) {
+      const updatedBlockedBeds = { ...blockedBedsForRoom };
+      let changed = false;
+      for (const date in updatedBlockedBeds) {
+        if (updatedBlockedBeds[date]?.includes(Number(bedId))) {
+          updatedBlockedBeds[date] = updatedBlockedBeds[date].filter(id => id !== Number(bedId));
+          changed = true;
+        }
+      }
+      if (changed) {
+        onBlockedBedsChange(room.id, updatedBlockedBeds);
+      }
+    }
   };
 
   const handleDeleteGuest = (guestIndex: number) => {

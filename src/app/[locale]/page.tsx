@@ -133,6 +133,7 @@ interface RoomListProps {
   onProceedToCheckout: () => void;
   onBlockedBedsChange: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
   calculateTotalPrice: () => { total: number; cityTaxTotal: number };
+  allBlockedBeds: { [roomId: number]: { [date: string]: number[] } };
 }
 
 type SupportedLang = 'it' | 'en' | 'fr' | 'de' | 'es';
@@ -163,6 +164,7 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
   onProceedToCheckout,
   onBlockedBedsChange,
   calculateTotalPrice,
+  allBlockedBeds,
   t
 }) => {
   
@@ -274,6 +276,7 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
                 guestTypes={guestTypes}
                 onPrivacyCostChange={onPrivacyCostChange}
                 onBlockedBedsChange={onBlockedBedsChange}
+                blockedBedsForRoom={allBlockedBeds[room.roomId] || {}}
                 t={t}
               />
               </AccordionContent>
@@ -959,6 +962,7 @@ export default function BookingPage() {
                 onProceedToCheckout={handleProceedToCheckout}
                 onBlockedBedsChange={handleBlockedBedsChange}
                 calculateTotalPrice={calculateTotalPrice}
+                allBlockedBeds={allBlockedBeds}
                 t={t}
               />
             </Card>
