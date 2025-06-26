@@ -194,7 +194,7 @@ export default function StripeSyncPage() {
                                   if (!prev) return prev;
                                   return {
                                     ...prev,
-                                    matches: prev.matches.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                    matches: prev.matches.map((r) => r.id === row.id ? { ...r, solved: newSolved } : r)
                                   };
                                 });
                               }}
@@ -230,7 +230,7 @@ export default function StripeSyncPage() {
                                   if (!prev) return prev;
                                   return {
                                     ...prev,
-                                    missing: prev.missing.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                    missing: prev.missing.map((r) => r.id === row.id ? { ...r, solved: newSolved } : r)
                                   };
                                 });
                               }}
@@ -266,7 +266,7 @@ export default function StripeSyncPage() {
                                   if (!prev) return prev;
                                   return {
                                     ...prev,
-                                    noPaymentIntent: prev.noPaymentIntent.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                    noPaymentIntent: prev.noPaymentIntent.map((r) => r.id === row.id ? { ...r, solved: newSolved } : r)
                                   };
                                 });
                               }}
@@ -323,7 +323,7 @@ export default function StripeSyncPage() {
                                     if (!prev) return prev;
                                     return {
                                       ...prev,
-                                      missing: prev.missing.map((r, idx) => idx === i ? { ...r, solved: newSolved } : r)
+                                      missing: prev.missing.map((r) => r.id === row.id ? { ...r, solved: newSolved } : r)
                                     };
                                   });
                                 }}
