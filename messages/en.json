@@ -150,5 +150,28 @@
     "website": "Website: www.rifugiodibona.com",
     "notLegalDocument": "This document has no fiscal value.",
     "checkInOutTimes": "Check-in time: from 3:00 PM to 7:00 PM. Check-out time: before 9:00 AM."
+  },
+  "bedBlocking": {
+    "privacySupplement": "Privacy Supplement",
+    "tooltip": "If you want more privacy during your stay, you can block one or more available beds in the room for each night, so that no one else can book them.",
+    "paragraph": "If you want more privacy during your stay, you can block one or more available beds in the room for each night, so that no one else can book them.",
+    "noneBlocked": "No beds blocked",
+    "oneBlocked": "1 bed blocked",
+    "manyBlocked": "{count} beds blocked",
+    "nightOf": "Night of {date}",
+    "blockBedsNight": "Block beds - Night of {date}",
+    "totalForNight": "Total for this night:",
+    "noBedsToBlock": "No beds available to block for this night.",
+    "loading": "Loading privacy options...",
+    "error": "Unable to load bed block prices",
+    "noAvailability": "No availability to block beds."
+  },
+  "bedMap": {
+    "title": "Bed map:",
+    "free": "free",
+    "occupied": "occupied",
+    "noInfo": "No information available about the beds in this room",
+    "nightOf": "Night of {date}",
+    "nightIndex": "{current} of {total}"
   }
 } 

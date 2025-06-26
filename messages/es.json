@@ -150,5 +150,28 @@
     "website": "Sitio web: www.rifugiodibona.com",
     "notLegalDocument": "Este documento no tiene valor fiscal.",
     "checkInOutTimes": "Horario de llegada: de 15:00 a 19:00. Horario de salida: antes de las 09:00."
+  },
+  "bedBlocking": {
+    "privacySupplement": "Suplemento de privacidad",
+    "tooltip": "Si deseas más privacidad durante tu estancia, puedes bloquear una o más camas disponibles en la habitación para cada noche, de modo que nadie más pueda reservarlas.",
+    "paragraph": "Si deseas más privacidad durante tu estancia, puedes bloquear una o más camas disponibles en la habitación para cada noche, de modo que nadie más pueda reservarlas.",
+    "noneBlocked": "Ninguna cama bloqueada",
+    "oneBlocked": "1 cama bloqueada",
+    "manyBlocked": "{count} camas bloqueadas",
+    "nightOf": "Noche del {date}",
+    "blockBedsNight": "Bloquear camas - Noche del {date}",
+    "totalForNight": "Total por esta noche:",
+    "noBedsToBlock": "No hay camas disponibles para bloquear esta noche.",
+    "loading": "Cargando opciones de privacidad...",
+    "error": "No se pueden cargar los precios de bloqueo de camas",
+    "noAvailability": "No hay disponibilidad para bloquear camas."
+  },
+  "bedMap": {
+    "title": "Mapa de camas:",
+    "free": "libre",
+    "occupied": "ocupado",
+    "noInfo": "No hay información disponible sobre las camas de esta habitación",
+    "nightOf": "Noche del {date}",
+    "nightIndex": "{current} de {total}"
   }
 } 

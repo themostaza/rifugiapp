@@ -37,6 +37,7 @@ interface BedBlockingProps {
   checkIn?: Date;
   checkOut?: Date;
   onBlockedBedsChange: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
 interface BedBlockPricing {
@@ -52,7 +53,8 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
   onPrivacyCostChange,
   checkIn,
   checkOut,
-  onBlockedBedsChange
+  onBlockedBedsChange,
+  t
 }) => {
   const [blockedBeds, setBlockedBeds] = useState<{[date: string]: number[]}>({});
   const [pricingData, setPricingData] = useState<BedBlockPricing[]>([]);
@@ -198,29 +200,28 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
   const getBlockedBedsDescription = (date: string) => {
     const blockedBedsForDate = blockedBeds[date] || [];
     const count = blockedBedsForDate.length;
-    
-    if (count === 0) return "Nessun letto bloccato";
-    if (count === 1) return "1 letto bloccato";
-    return `${count} letti bloccati`;
+    if (count === 0) return t('bedBlocking.noneBlocked');
+    if (count === 1) return t('bedBlocking.oneBlocked');
+    return t('bedBlocking.manyBlocked', { count });
   }
 
   if (isLoading) {
-    return <div className="py-2 text-gray-500">Caricamento opzioni di privacy...</div>;
+    return <div className="py-2 text-gray-500">{t('bedBlocking.loading')}</div>;
   }
 
   if (error) {
-    return <div className="py-2 text-red-500">{error}</div>;
+    return <div className="py-2 text-red-500">{t('bedBlocking.error')}</div>;
   }
 
   if (filteredAvailability.length === 0) {
-    return <div className="py-2 text-gray-500">Nessuna disponibilità per bloccare i letti.</div>;
+    return <div className="py-2 text-gray-500">{t('bedBlocking.noAvailability')}</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
         <Lock className="h-4 w-4 text-gray-700" />
-        <h3 className="font-medium text-sm sm:text-base">Supplemento privacy</h3>
+        <h3 className="font-medium text-sm sm:text-base">{t('bedBlocking.privacySupplement')}</h3>
         
         <TooltipProvider>
           <Tooltip>
@@ -230,7 +231,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
               </Button>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-sm">
-              <p>Se desideri maggiore riservatezza durante il tuo soggiorno, puoi bloccare uno o più posti letto disponibili nella stanza per ogni notte, in modo che non possano essere prenotati da qualcun&apos;altro.</p>
+              <p>{t('bedBlocking.tooltip')}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -238,7 +239,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
 
       <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
         <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
-          Se desideri maggiore riservatezza durante il tuo soggiorno, puoi bloccare uno o più posti letto disponibili nella stanza per ogni notte, in modo che non possano essere prenotati da &apos;altro.
+          {t('bedBlocking.paragraph')}
         </p>
 
         <div className="space-y-2">
@@ -254,7 +255,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-white rounded-lg border hover:border-gray-300 gap-2 sm:gap-0"
               >
                 <div className="font-medium text-sm sm:text-base">
-                  Notte del {formatDate(date)}
+                  {t('bedBlocking.nightOf', { date: formatDate(date) })}
                 </div>
                 
                 <Dialog onOpenChange={() => {
@@ -274,7 +275,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle className="text-lg sm:text-xl">Blocca letti - Notte del {formatDate(date)}</DialogTitle>
+                      <DialogTitle className="text-lg sm:text-xl">{t('bedBlocking.blockBedsNight', { date: formatDate(date) })}</DialogTitle>
                     </DialogHeader>
                     
                     {blockableBeds.length > 0 ? (
@@ -325,13 +326,13 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                         </div>
                         
                         <div className="flex justify-between pt-3 border-t">
-                          <span className="font-medium text-sm sm:text-base">Totale per questa notte:</span>
+                          <span className="font-medium text-sm sm:text-base">{t('bedBlocking.totalForNight')}</span>
                           <span className="font-bold text-sm sm:text-base">€{nightPrice.toFixed(2)}</span>
                         </div>
                       </div>
                     ) : (
                       <div className="p-3 sm:p-4 bg-yellow-50 rounded-lg text-yellow-800 text-sm sm:text-base">
-                        Non ci sono letti disponibili da bloccare per questa notte.
+                        {t('bedBlocking.noBedsToBlock')}
                       </div>
                     )}
                   </DialogContent>

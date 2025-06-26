@@ -81,6 +81,7 @@ interface RoomContentProps {
     cityTaxPrice: number;
   }>;
   onBlockedBedsChange?: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
 const ImageCarousel = ({ images }: { images: string[] }) => {
@@ -316,7 +317,8 @@ const RoomContent = ({
   checkOut,
   onPrivacyCostChange,
   guestTypes,
-  onBlockedBedsChange
+  onBlockedBedsChange,
+  t
 }: RoomContentProps) => {
   // State per tracciare i letti bloccati dall'utente per migliorare la privacy
   const allBedIds = room.availableBedIds?.map(bed => bed.id.toString()) || [];
@@ -389,6 +391,7 @@ const RoomContent = ({
             allBeds={room.allBeds || []} 
             availableBeds={room.availableBedIds || []}
             availabilityByNight={availabilityByNight}
+            t={t}
           />
         </div>
         
@@ -444,6 +447,7 @@ const RoomContent = ({
             checkIn={checkIn}
             checkOut={checkOut}
             onBlockedBedsChange={onBlockedBedsChange || (() => {})}
+            t={t}
           />
         </div>
 

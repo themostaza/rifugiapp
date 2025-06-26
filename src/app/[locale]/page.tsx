@@ -148,7 +148,7 @@ function getMessages(lang: string): Messages {
   return translations[(lang as SupportedLang)] || translations['it'];
 }
 
-const RoomList: React.FC<RoomListProps & { t: (key: string) => string }> = ({ 
+const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string, unknown>) => string }> = ({ 
   rooms,
   onSelect, 
   totalGuests, 
@@ -202,11 +202,11 @@ const RoomList: React.FC<RoomListProps & { t: (key: string) => string }> = ({
   return (
     <div className="space-y-4">
       <div className="bg-gray-100 p-4 rounded-lg mb-4">
-        <h3 className="font-semibold mb-2">{t('booking.guestsToAssign') || 'Ospiti da assegnare:'}</h3>
+        <h3 className="font-semibold mb-2">{t('booking.guestsToAssign', { var: { adults: getUnassignedGuests().adults, children: getUnassignedGuests().children, infants: getUnassignedGuests().infants } }) || 'Ospiti da assegnare:'}</h3>
         <div className="flex gap-4">
-          <span>{t('booking.adults') || 'Adulti'}: {getUnassignedGuests().adults}</span>
-          <span>{t('booking.children') || 'Bambini'}: {getUnassignedGuests().children}</span>
-          <span>{t('booking.infants') || 'Neonati'}: {getUnassignedGuests().infants}</span>
+          <span>{t('booking.adults', { var: { count: getUnassignedGuests().adults } }) || 'Adulti'}: {getUnassignedGuests().adults}</span>
+          <span>{t('booking.children', { var: { count: getUnassignedGuests().children } }) || 'Bambini'}: {getUnassignedGuests().children}</span>
+          <span>{t('booking.infants', { var: { count: getUnassignedGuests().infants } }) || 'Neonati'}: {getUnassignedGuests().infants}</span>
         </div>
       </div>
       
@@ -274,6 +274,7 @@ const RoomList: React.FC<RoomListProps & { t: (key: string) => string }> = ({
                 guestTypes={guestTypes}
                 onPrivacyCostChange={onPrivacyCostChange}
                 onBlockedBedsChange={onBlockedBedsChange}
+                t={t}
               />
               </AccordionContent>
             </AccordionItem>
@@ -345,7 +346,7 @@ export default function BookingPage() {
   }, [detectedLang]);
 
   const messages = useMemo(() => getMessages(language), [language]);
-  const t = useCallback((key: string): string => {
+  const t = useCallback((key: string, vars?: Record<string, unknown>): string => {
     const parts = key.split('.');
     let value: unknown = messages;
     for (const part of parts) {
@@ -356,8 +357,9 @@ export default function BookingPage() {
         break;
       }
     }
+    let str: string;
     if (typeof value === 'string') {
-      return value;
+      str = value;
     } else {
       let fallback: unknown = itMessages;
       for (const part of parts) {
@@ -368,8 +370,15 @@ export default function BookingPage() {
           break;
         }
       }
-      return typeof fallback === 'string' ? fallback : key;
+      str = typeof fallback === 'string' ? fallback : key;
     }
+    // Sostituzione variabili tipo {date} o {count}
+    if (vars && typeof str === 'string') {
+      Object.entries(vars).forEach(([k, v]) => {
+        str = str.replace(new RegExp(`{${k}}`, 'g'), String(v));
+      });
+    }
+    return str;
   }, [messages]);
 
   // Handler per ricevere i dati dettagliati dei letti bloccati da RoomContent
@@ -649,9 +658,9 @@ export default function BookingPage() {
     <div className="flex items-center justify-between py-4">
       <div>
         <div className="font-medium">{
-          type === 'adults' ? t('booking.adultsLabel') :
-          type === 'children' ? t('booking.childrenLabel') :
-          t('booking.infantsLabel')
+          type === 'adults' ? t('booking.adultsLabel', { var: { count: value } }) :
+          type === 'children' ? t('booking.childrenLabel', { var: { count: value } }) :
+          t('booking.infantsLabel', { var: { count: value } })
         }</div>
       </div>
       <div className="flex items-center gap-3">

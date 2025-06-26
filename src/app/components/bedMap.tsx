@@ -28,13 +28,15 @@ interface BedMapProps {
   allBeds?: Array<{ id: number; name: string }>
   availableBeds?: Array<{ id: number; name: string }>
   availabilityByNight?: NightAvailability[]
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
 const BedMap: React.FC<BedMapProps> = ({ 
   roomId, 
   allBeds = [], 
   availableBeds = [],
-  availabilityByNight = []
+  availabilityByNight = [],
+  t
 }) => {
 // Debug log
 // console.log('BedMap props:', {
@@ -76,7 +78,7 @@ const BedMap: React.FC<BedMapProps> = ({
     if (bedsWithAvailability.length === 0) {
       return (
         <div className="p-4 text-gray-500">
-          Nessuna informazione disponibile sui letti di questa stanza
+          {t('bedMap.noInfo')}
         </div>
       )
     }
@@ -84,12 +86,12 @@ const BedMap: React.FC<BedMapProps> = ({
     return (
       <div className="p-4 space-y-4">
         <div className="text-sm text-gray-600 mb-2">
-          <strong>Mappa dei letti:</strong>{' '}
+          <strong>{t('bedMap.title')}</strong>{' '}
           <span className="px-3 py-1 rounded-sm border-2 text-sm bg-green-100 text-green-800 border-green-200">
-            libero
+            {t('bedMap.free')}
           </span>{' '}
           <span className="px-3 py-1 rounded-sm border-2 text-sm bg-red-100 text-red-800 border-red-200">
-            occupato
+            {t('bedMap.occupied')}
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -131,7 +133,7 @@ const BedMap: React.FC<BedMapProps> = ({
     if (bedsWithAvailability.length === 0) {
       return (
         <div className="p-4 text-gray-500">
-          Nessuna informazione disponibile sui letti di questa stanza
+          {t('bedMap.noInfo')}
         </div>
       )
     }
@@ -139,12 +141,12 @@ const BedMap: React.FC<BedMapProps> = ({
     return (
       <div className="p-4 space-y-4">
         <div className="text-sm text-gray-600 mb-2">
-          <strong>Mappa dei letti:</strong>{' '}
+          <strong>{t('bedMap.title')}</strong>{' '}
           <span className="px-3 py-1 rounded-sm border-2 text-sm bg-green-100 text-green-800 border-green-200">
-            libero
+            {t('bedMap.free')}
           </span>{' '}
           <span className="px-3 py-1 rounded-sm border-2 text-sm bg-red-100 text-red-800 border-red-200">
-            occupato
+            {t('bedMap.occupied')}
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -180,10 +182,10 @@ const BedMap: React.FC<BedMapProps> = ({
         
         <div className="text-center">
           <span className="font-medium">
-            Notte del {format(currentDate, 'd MMMM yyyy', { locale: it })}
+            {t('bedMap.nightOf', { date: format(currentDate, 'd MMMM yyyy', { locale: it }) })}
           </span>
           <span className="text-xs text-gray-500 block">
-            {selectedNightIndex + 1} di {availabilityByNight.length}
+            {t('bedMap.nightIndex', { current: selectedNightIndex + 1, total: availabilityByNight.length })}
           </span>
         </div>
         
@@ -198,12 +200,12 @@ const BedMap: React.FC<BedMapProps> = ({
       </div>
       
       <div className="text-sm text-gray-600 mb-2">
-        <strong>Mappa dei letti:</strong>{' '}
+        <strong>{t('bedMap.title')}</strong>{' '}
         <span className="px-3 py-1 rounded-sm border-2 text-sm bg-green-100 text-green-800 border-green-200">
-          libero
+          {t('bedMap.free')}
         </span>{' '}
         <span className="px-3 py-1 rounded-sm border-2 text-sm bg-red-100 text-red-800 border-red-200">
-          occupato
+          {t('bedMap.occupied')}
         </span>
       </div>
       

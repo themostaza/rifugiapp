@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
-import RoomContent from './components/roomcontent'
+//import RoomContent from './components/roomcontent'
 import Cart from './components/cart'
 import Footer from '@/components/footer/footer'
 import Header from '@/components/header/header'
@@ -130,18 +130,18 @@ interface RoomListProps {
 
 const RoomList: React.FC<RoomListProps> = ({ 
   rooms,
-  onSelect, 
+  //onSelect, 
   totalGuests, 
   assignedGuests,
-  onGuestAssignment,
+  //onGuestAssignment,
   pensionType,
   checkIn,
   checkOut,
-  availabilityByNight,
+  //availabilityByNight,
   guestTypes,
-  onPrivacyCostChange,
+  //onPrivacyCostChange,
   onProceedToCheckout,
-  onBlockedBedsChange
+  //onBlockedBedsChange
 }) => {
   
 
@@ -222,7 +222,7 @@ const RoomList: React.FC<RoomListProps> = ({
                 </AccordionTrigger>
               </div>
               <AccordionContent className="sm:p-4 my-2 sm:my-0">
-              <RoomContent 
+              {/* <RoomContent 
                 room={{
                   id: room.roomId,
                   description: room.description,
@@ -252,7 +252,7 @@ const RoomList: React.FC<RoomListProps> = ({
                 guestTypes={guestTypes}
                 onPrivacyCostChange={onPrivacyCostChange}
                 onBlockedBedsChange={onBlockedBedsChange}
-              />
+              /> */}
               </AccordionContent>
             </AccordionItem>
           );
@@ -310,6 +310,31 @@ export default function BookingPage() {
   const [isAdminBooking, setIsAdminBooking] = useState(false);
 
   const today = useMemo(() => new Date(), []);
+  //const messages = useMemo(() => itMessages, []);
+  // const t = useCallback((key: string, vars?: Record<string, unknown>): string => {
+  //   const parts = key.split('.');
+  //   //let value: unknown = messages;
+  //   for (const part of parts) {
+  //     if (typeof value === 'object' && value !== null && part in value) {
+  //       value = (value as Record<string, unknown>)[part];
+  //     } else {
+  //       value = undefined;
+  //       break;
+  //     }
+  //   }
+  //   let str: string;
+  //   if (typeof value === 'string') {
+  //     str = value;
+  //   } else {
+  //     str = key;
+  //   }
+  //   if (vars && typeof str === 'string') {
+  //     Object.entries(vars).forEach(([k, v]) => {
+  //       str = str.replace(new RegExp(`{${k}}`, 'g'), String(v));
+  //     });
+  //   }
+  //   return str;
+  // }, [messages]);
 
   
   // Handler per ricevere i dati dettagliati dei letti bloccati da RoomContent

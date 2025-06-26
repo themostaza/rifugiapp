@@ -150,5 +150,28 @@
     "website": "Website: www.rifugiodibona.com",
     "notLegalDocument": "Il presente documento non ha valore ai fini fiscali.",
     "checkInOutTimes": "Orario check-in: dalle 15:00 alle 19:00. Orario check-out: entro le 09:00."
+  },
+  "bedBlocking": {
+    "privacySupplement": "Supplemento privacy",
+    "tooltip": "Se desideri maggiore riservatezza durante il tuo soggiorno, puoi bloccare uno o più posti letto disponibili nella stanza per ogni notte, in modo che non possano essere prenotati da qualcun'altro.",
+    "paragraph": "Se desideri maggiore riservatezza durante il tuo soggiorno, puoi bloccare uno o più posti letto disponibili nella stanza per ogni notte, in modo che non possano essere prenotati da altri.",
+    "noneBlocked": "Nessun letto bloccato",
+    "oneBlocked": "1 letto bloccato",
+    "manyBlocked": "{count} letti bloccati",
+    "nightOf": "Notte del {date}",
+    "blockBedsNight": "Blocca letti - Notte del {date}",
+    "totalForNight": "Totale per questa notte:",
+    "noBedsToBlock": "Non ci sono letti disponibili da bloccare per questa notte.",
+    "loading": "Caricamento opzioni di privacy...",
+    "error": "Impossibile caricare i prezzi per il blocco letti",
+    "noAvailability": "Nessuna disponibilità per bloccare i letti."
+  },
+  "bedMap": {
+    "title": "Mappa dei letti:",
+    "free": "libero",
+    "occupied": "occupato",
+    "noInfo": "Nessuna informazione disponibile sui letti di questa stanza",
+    "nightOf": "Notte del {date}",
+    "nightIndex": "{current} di {total}"
   }
 } 

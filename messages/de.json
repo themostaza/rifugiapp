@@ -150,5 +150,28 @@
     "website": "Webseite: www.rifugiodibona.com",
     "notLegalDocument": "Dieses Dokument hat keinen steuerlichen Wert.",
     "checkInOutTimes": "Check-in-Zeit: von 15:00 bis 19:00 Uhr. Check-out-Zeit: vor 09:00 Uhr."
+  },
+  "bedBlocking": {
+    "privacySupplement": "Privatsphäre-Zuschlag",
+    "tooltip": "Wenn Sie während Ihres Aufenthalts mehr Privatsphäre wünschen, können Sie für jede Nacht ein oder mehrere verfügbare Betten im Zimmer blockieren, damit sie von niemand anderem gebucht werden können.",
+    "paragraph": "Wenn Sie während Ihres Aufenthalts mehr Privatsphäre wünschen, können Sie für jede Nacht ein oder mehrere verfügbare Betten im Zimmer blockieren, damit sie von niemand anderem gebucht werden können.",
+    "noneBlocked": "Keine Betten blockiert",
+    "oneBlocked": "1 Bett blockiert",
+    "manyBlocked": "{count} Betten blockiert",
+    "nightOf": "Nacht vom {date}",
+    "blockBedsNight": "Betten blockieren - Nacht vom {date}",
+    "totalForNight": "Gesamt für diese Nacht:",
+    "noBedsToBlock": "Keine Betten verfügbar, die für diese Nacht blockiert werden können.",
+    "loading": "Lade Privatsphäre-Optionen...",
+    "error": "Preise für das Blockieren von Betten konnten nicht geladen werden",
+    "noAvailability": "Keine Verfügbarkeit zum Blockieren von Betten."
+  },
+  "bedMap": {
+    "title": "Bettenkarte:",
+    "free": "frei",
+    "occupied": "belegt",
+    "noInfo": "Keine Informationen zu den Betten in diesem Zimmer verfügbar",
+    "nightOf": "Nacht vom {date}",
+    "nightIndex": "{current} von {total}"
   }
 } 
