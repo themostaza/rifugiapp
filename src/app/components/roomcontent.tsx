@@ -150,17 +150,19 @@ const BedSelection = ({
   guestType,
   availableCount,
   onAddGuest,
-  isDisabled
+  isDisabled,
+  t
 }: { 
   guestType: 'adult' | 'child' | 'infant';
   availableCount: number;
   onAddGuest: () => void;
   isDisabled: boolean;
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }) => {
   const labels = {
-    adult: 'Adulto',
-    child: 'Bambino',
-    infant: 'Neonato'
+    adult: t('room.adultLabel'),
+    child: t('room.childLabel'),
+    infant: t('room.infantLabel')
   }
 
   return (
@@ -171,8 +173,8 @@ const BedSelection = ({
       disabled={isDisabled || availableCount === 0}
     >
       <Plus className="h-4 w-4" />
-      Aggiungi {labels[guestType].toLowerCase()}
-      {availableCount > 0 && <span className="text-sm text-gray-500">({availableCount} disponibili)</span>}
+      {t('room.addGuestButton', { type: labels[guestType].toLowerCase() })}
+      {availableCount > 0 && <span className="text-sm text-gray-500">({t('room.availableBedsCount', { count: availableCount })})</span>}
     </Button>
   )
 }
@@ -185,7 +187,8 @@ const BedAssignment = ({
   availableBeds,
   allBedsWithPricing,
   pensionType,
-  guestTypes
+  guestTypes,
+  t
 }: {
   guestType: 'adult' | 'child' | 'infant';
   onBedSelect: (bedId: string) => void;
@@ -211,11 +214,12 @@ const BedAssignment = ({
     cityTax: boolean;
     cityTaxPrice: number;
   }>;
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }) => {
   const labels = {
-    adult: 'Adulto',
-    child: 'Bambino',
-    infant: 'Neonato'
+    adult: t('room.adultLabel'),
+    child: t('room.childLabel'),
+    infant: t('room.infantLabel')
   }
 
   // Use the pricing utility function
@@ -257,14 +261,14 @@ const BedAssignment = ({
         
         <Select value={selectedBedId || ''} onValueChange={onBedSelect}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Seleziona letto" />
+            <SelectValue placeholder={t('room.selectBedPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {availableBeds.map((bedId) => {
               const bed = allBedsWithPricing.find(b => b.id.toString() === bedId);
               return (
                 <SelectItem key={bedId} value={bedId}>
-                  {bed ? bed.name : `Letto ${bedId}`}
+                  {bed ? bed.name : t('room.bedFallback', { id: bedId })}
                 </SelectItem>
               );
             })}
@@ -291,12 +295,12 @@ const BedAssignment = ({
       {selectedBedId && (
         <div className="flex flex-col w-full sm:w-auto">
           <span className="text-gray-700 font-medium">
-            €{discountedPrice.toFixed(2)} per notte
+            €{discountedPrice.toFixed(2)} {t('room.perNight')}
           </span>
           
           {hasDiscount && (
             <span className="text-sm text-green-600">
-              Sconto {(discount * 100).toFixed(0)}% (da €{basePrice.toFixed(2)})
+              {t('room.discountLabel', { percent: (discount * 100).toFixed(0), base: basePrice.toFixed(2) })}
             </span>
           )}
         </div>
@@ -388,7 +392,7 @@ const RoomContent = ({
         {/* Mappa dei letti */}
         <div className="bg-white rounded-lg sm:border">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:mb-4 p-2 sm:p-4 gap-2">
-            <h3 className="text-lg font-medium">Mappa dei letti</h3>
+            <h3 className="text-lg font-medium">{t('room.bedMapTitle')}</h3>
             
             {availabilityByNight.length > 0 && (
               <TooltipProvider>
@@ -396,13 +400,12 @@ const RoomContent = ({
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="sm" className="flex items-center gap-2 w-full sm:w-auto">
                       <Info className="h-4 w-4" />
-                      <span>Informazioni</span>
+                      <span>{t('room.infoButton')}</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p>
-                      Puoi visualizzare la disponibilità per ogni notte. I letti che non sono occupati
-                      possono essere bloccati per migliorare la tua privacy (costo aggiuntivo).
+                      {t('room.infoTooltip')}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -425,24 +428,27 @@ const RoomContent = ({
             availableCount={unassignedGuests.adults}
             onAddGuest={() => handleAddGuest('adult')}
             isDisabled={isRoomFull}
+            t={t}
           />
           <BedSelection 
             guestType="child"
             availableCount={unassignedGuests.children}
             onAddGuest={() => handleAddGuest('child')}
             isDisabled={isRoomFull}
+            t={t}
           />
           <BedSelection 
             guestType="infant"
             availableCount={unassignedGuests.infants}
             onAddGuest={() => handleAddGuest('infant')}
             isDisabled={isRoomFull}
+            t={t}
           />
         </div>
 
         {assignedGuests.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-medium mb-2">Ospiti assegnati a questa stanza:</h4>
+            <h4 className="font-medium mb-2">{t('room.assignedGuestsTitle')}</h4>
             <div className="space-y-3">
               {assignedGuests.map((guest, index) => (
                 <BedAssignment
@@ -455,6 +461,7 @@ const RoomContent = ({
                   allBedsWithPricing={room.availableBedIds || []}
                   pensionType={pensionType}
                   guestTypes={guestTypes}
+                  t={t}
                 />
               ))}
             </div>
@@ -480,7 +487,7 @@ const RoomContent = ({
       {isRoomFull && (
         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
           <p className="text-yellow-800">
-            Non c&apos;è disponibilità di altri letti continuativi nelle date selezionate
+            {t('room.noMoreBedsWarning')}
           </p>
         </div>
       )}

@@ -6,11 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 interface NotesSectionProps {
   initialNotes?: string;
   onNotesChange: (notes: string) => void;
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
 const NotesSection: React.FC<NotesSectionProps> = ({ 
   initialNotes = '', 
-  onNotesChange 
+  onNotesChange,
+  t
 }) => {
   const [internalNotes, setInternalNotes] = useState(initialNotes);
 
@@ -38,15 +40,15 @@ const NotesSection: React.FC<NotesSectionProps> = ({
 
   return (
     <section>
-      <h2 className="text-xl font-semibold mb-4">5. Note</h2>
+      <h2 className="text-xl font-semibold mb-4">{t('notes.title')}</h2>
       <p className="text-gray-600 mb-4">
-        Aggiungi eventuali note (allergie, intolleranze, richieste particolari, ecc).
+        {t('notes.description')}
       </p>
       <Textarea 
         value={internalNotes} // Use internal state for value
         onChange={handleTextChange} // Update internal state directly
         className="w-full min-h-32"
-        placeholder="Inserisci qui le tue note..."
+        placeholder={t('notes.placeholder')}
       />
     </section>
   );

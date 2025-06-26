@@ -54,6 +54,7 @@ interface CheckoutPageProps {
   onBackToRooms: () => void;
   onServicesChange: (totalServicesCost: number) => void;
   isAdminBooking?: boolean;
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
 interface Service {
@@ -83,6 +84,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
   onBackToRooms,
   onServicesChange,
   isAdminBooking = false,
+  t
 }) => {
   // States for services
   const [services, setServices] = useState<Service[]>([]);
@@ -201,9 +203,9 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     
     if (paymentStatus === 'cancelled') {
       // Show a message to the user that the payment was cancelled
-      alert('Il pagamento è stato annullato. Puoi modificare le tue informazioni e riprovare.');
+      alert(t('checkout.paymentCancelled'));
     }
-  }, []);
+  }, [t]);
 
   // Memoized payment handlers
   const handleProceedToPayment = useCallback(async () => {
@@ -217,7 +219,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
       if (!checkInFormatted || !checkOutFormatted) {
         console.error("Error formatting check-in/check-out dates.");
-        alert("An internal error occurred. Unable to proceed.");
+        alert(t('checkout.internalError'));
         setIsProcessingPayment(false);
         return;
       }
@@ -279,7 +281,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert(`Si è verificato un errore durante il pagamento: ${error instanceof Error ? error.message : String(error)}. Riprova più tardi.`);
+      alert(`${t('checkout.paymentError')}: ${error instanceof Error ? error.message : String(error)}. ${t('checkout.tryAgainLater')}`);
     } finally {
       setIsProcessingPayment(false);
     }
@@ -290,6 +292,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     totalServicesCost, 
     cartTotals,
     selectedServices,
+    t
   ]);
 
   const handleOpenStripeCheckout = useCallback(() => {
@@ -310,7 +313,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
       if (!checkInFormatted || !checkOutFormatted) {
         console.error("Error formatting check-in/check-out dates.");
-        alert("An internal error occurred. Unable to proceed.");
+        alert(t('checkout.internalError'));
         setIsProcessingPayment(false);
         return;
       }
@@ -359,7 +362,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
       
     } catch (error) {
       console.error('Admin booking error:', error);
-      alert(`Si è verificato un errore durante la creazione della prenotazione: ${error instanceof Error ? error.message : String(error)}. Riprova più tardi.`);
+      alert(`${t('checkout.adminBookingError')}: ${error instanceof Error ? error.message : String(error)}. ${t('checkout.tryAgainLater')}`);
     } finally {
       setIsProcessingPayment(false);
     }
@@ -370,6 +373,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     totalServicesCost, 
     cartTotals,
     selectedServices,
+    t
   ]);
 
   // Callback handlers for child components
@@ -392,21 +396,21 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
             onClick={handleGoBack}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
-            Torna alle stanze
+            {t('checkout.backToRooms')}
           </Button>
 
           <Card className="p-1 sm:p-6 sm:shadow-md sm:border space-y-8">
             {/* Additional Services Section */}
             <section>
-              <h2 className="text-xl font-semibold mb-4">4. Servizi aggiuntivi</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('checkout.additionalServicesTitle')}</h2>
               <p className="text-gray-600 mb-4">
-                Se desideri aggiungere altri servizi, spunta la rispettiva casella e, se richiesto, inserisci la quantità desiderata.
+                {t('checkout.additionalServicesDescription')}
               </p>
               
               {servicesLoading ? (
-                <div className="py-4 text-center">Caricamento servizi in corso...</div>
+                <div className="py-4 text-center">{t('checkout.loadingServices')}</div>
               ) : services.length === 0 ? (
-                <div className="py-4 text-center">Nessun servizio aggiuntivo disponibile</div>
+                <div className="py-4 text-center">{t('checkout.noServicesAvailable')}</div>
               ) : (
                 <div className="space-y-4">
                   {services.map(service => (
@@ -429,7 +433,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                             onValueChange={(value: string) => handleQuantityChange(service.id, parseInt(value))}
                           >
                             <SelectTrigger className="w-20">
-                              <SelectValue placeholder="Qtà" />
+                              <SelectValue placeholder={t('checkout.quantityPlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                               {[...Array(10)].map((_, i) => (
@@ -449,7 +453,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
               
               {selectedServices.length > 0 && (
                 <div className="mt-4 text-right font-medium">
-                  Totale servizi aggiuntivi: €{totalServicesCost.toFixed(2)}
+                  {t('checkout.totalAdditionalServices')}: €{totalServicesCost.toFixed(2)}
                 </div>
               )}
             </section>
@@ -457,38 +461,40 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
             {/* Use NotesSection component */}
             <NotesSection 
               initialNotes={finalNotes} 
-              onNotesChange={handleNotesChange} 
+              onNotesChange={handleNotesChange}
+              t={t}
             />
 
             {/* Use ContactInfoSection component */}
             <ContactInfoSection 
-              onContactInfoChange={handleContactInfoChange} 
+              onContactInfoChange={handleContactInfoChange}
+              t={t}
             />
 
             {/* Booking Summary */}
             <section>
-              <h2 className="text-xl font-semibold mb-4">Riepilogo della prenotazione:</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('checkout.bookingSummary')}</h2>
               
               {bookingDetails.rooms.map((room) => {
                 const roomGuests = bookingDetails.assignedGuests.filter(guest => guest.roomId === room.roomId);
                 
                 if (roomGuests.length === 0) return null;
                 
-                const accommodationType = bookingDetails.pensionType === 'bb' ? 'Bed & Breakfast' : 'Mezza Pensione';
+                const accommodationType = bookingDetails.pensionType === 'bb' ? t('common.bb') : t('common.hb');
                 
                 return (
                   <div key={room.roomId} className="space-y-4 mb-6">
                     <h3 className="font-semibold">{room.description}</h3>
                     <div className="space-y-2 text-gray-600">
-                      <p>Soggiorno: {formatDate(bookingDetails.checkIn)} - {formatDate(bookingDetails.checkOut)}</p>
-                      <p>Num. ospiti: {roomGuests.length} ({
+                      <p>{t('checkout.stay')}: {formatDate(bookingDetails.checkIn)} - {formatDate(bookingDetails.checkOut)}</p>
+                      <p>{t('checkout.numGuests')}: {roomGuests.length} ({
                         [
-                          `${roomGuests.filter(g => g.type === 'adult').length} Adulti`,
-                          roomGuests.filter(g => g.type === 'child').length > 0 ? `${roomGuests.filter(g => g.type === 'child').length} Bambini` : null,
-                          roomGuests.filter(g => g.type === 'infant').length > 0 ? `${roomGuests.filter(g => g.type === 'infant').length} Neonati` : null
+                          `${roomGuests.filter(g => g.type === 'adult').length} ${t('booking.adults')}`,
+                          roomGuests.filter(g => g.type === 'child').length > 0 ? `${roomGuests.filter(g => g.type === 'child').length} ${t('booking.children')}` : null,
+                          roomGuests.filter(g => g.type === 'infant').length > 0 ? `${roomGuests.filter(g => g.type === 'infant').length} ${t('booking.infants')}` : null
                         ].filter(Boolean).join(', ')
                       })</p>
-                      <p>Pernottamento: {accommodationType}</p>
+                      <p>{t('checkout.accommodation')}: {accommodationType}</p>
                     </div>
                     
                     <div className="space-y-2">
@@ -515,7 +521,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                           
                           return (
                             <div key={guestIndex} className="flex justify-between">
-                              <span>{guest.type.charAt(0).toUpperCase() + guest.type.slice(1)} - {bed.name}</span>
+                              <span>{t(`room.${guest.type}Label`)} - {bed.name}</span>
                               <span>€{finalPrice.toFixed(2)}</span>
                             </div>
                           );
@@ -523,7 +529,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                       
                       {bookingDetails.roomPrivacyCosts[room.roomId] > 0 && (
                         <div className="flex justify-between">
-                          <span>Supplemento privacy</span>
+                          <span>{t('cart.privacySupplement')}</span>
                           <span>€{bookingDetails.roomPrivacyCosts[room.roomId].toFixed(2)}</span>
                         </div>
                       )}
@@ -535,21 +541,21 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
               <div className="space-y-2">
                 {selectedServices.length > 0 && (
                   <div className="flex justify-between">
-                    <span>Servizi aggiuntivi</span>
+                    <span>{t('cart.additionalServices')}</span>
                     <span>€{totalServicesCost.toFixed(2)}</span>
                   </div>
                 )}
                 
                 <div className="flex justify-between">
                   <div className="flex items-center gap-1">
-                    <span>City Tax</span>
+                    <span>{t('cart.tax')}</span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
                           <Info className="w-4 h-4 text-gray-400" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Tassa di soggiorno applicata per legge</p>
+                          <p>{t('confirmation.cityTaxInfo')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -560,18 +566,18 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
               {/* Cancellation Policy */}
               <div className="mt-6 space-y-4">
-                <p className="text-gray-600">Per concludere la prenotazione, clicca sul pulsante &apos;Vai al pagamento&apos;.</p>
+                <p className="text-gray-600">{t('checkout.completeBookingInstruction')}</p>
                 <div className="bg-gray-50  rounded-lg">
-                  <p className="font-semibold mb-2">DISDETTA:</p>
-                  <p className="text-sm">seguire le istruzioni contenute nella mail di conferma.</p>
-                  <p className="text-sm">Stai effettuando una prenotazione di gruppo, pertanto dopo la conferma non sarà possibile aggiungere/rimuovere ospiti dalla prenotazione.</p>
+                  <p className="font-semibold mb-2">{t('checkout.cancellationTitle')}:</p>
+                  <p className="text-sm">{t('checkout.cancellationInstructions')}</p>
+                  <p className="text-sm">{t('checkout.groupBookingWarning')}</p>
                 </div>
                 <div>
-                  <p className="font-semibold">POLITICA DI RIMBORSO:</p>
+                  <p className="font-semibold">{t('checkout.refundPolicyTitle')}:</p>
                   <ul className="list-disc pl-5 space-y-1 text-sm">
-                    <li>Disdetta con <span className="font-medium">più di 7 giorni dall&apos;arrivo</span>: l&apos;intero importo verrà rimborsato</li>
-                    <li>Disdetta con <span className="font-medium">meno di 7 giorni dall&apos;arrivo</span>: verrà rimborsato il 70% dell&apos;importo</li>
-                    <li>Disdetta <span className="font-medium">il giorno stesso</span>: non rimborsabile</li>
+                    <li>{t('checkout.refundPolicy7Days')}</li>
+                    <li>{t('checkout.refundPolicyLess7Days')}</li>
+                    <li>{t('checkout.refundPolicySameDay')}</li>
                   </ul>
                 </div>
               </div>
@@ -579,7 +585,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
               {/* Total and Submit */}
               <div className="mt-6 border-t pt-4">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="font-semibold">Totale (IVA incl.)</span>
+                  <span className="font-semibold">{t('cart.total')}</span>
                   <span className="font-semibold text-xl">€{cartTotals.total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-end">
@@ -591,10 +597,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                     {isProcessingPayment ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Elaborazione...
+                        {t('checkout.processing')}
                       </>
                     ) : (
-                      isAdminBooking ? 'Conferma prenotazione' : 'Vai al pagamento'
+                      isAdminBooking ? t('checkout.confirmBooking') : t('checkout.goToPayment')
                     )}
                   </Button>
                 </div>
@@ -608,19 +614,18 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Procedi con il pagamento</DialogTitle>
+            <DialogTitle>{t('checkout.proceedWithPayment')}</DialogTitle>
             <DialogDescription>
               <p className="mt-4">
-                Stiamo aprendo una nuova finestra per il pagamento sicuro. 
-                Per completare la prenotazione, segui questi passaggi:
+                {t('checkout.paymentWindowDescription')}
               </p>
               <ol className="list-decimal list-inside mt-4 space-y-2">
-                <li>Completa il pagamento nella nuova finestra che si aprirà</li>
-                <li>Attendi la conferma del pagamento</li>
-                <li>Verrai reindirizzato automaticamente alla pagina di conferma</li>
+                <li>{t('checkout.paymentStep1')}</li>
+                <li>{t('checkout.paymentStep2')}</li>
+                <li>{t('checkout.paymentStep3')}</li>
               </ol>
               <p className="mt-4 text-sm text-gray-500">
-                Se la finestra non si apre, clicca sul pulsante qui sotto. Se qualcosa non funziona correttamente, chiudi questa finestra e riprova il pagamento.
+                {t('checkout.paymentTroubleshooting')}
               </p>
             </DialogDescription>
           </DialogHeader>
@@ -629,13 +634,13 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
               variant="outline"
               onClick={() => setShowPaymentDialog(false)}
             >
-              Chiudi
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleOpenStripeCheckout}
               className="bg-gray-900 hover:bg-gray-800 text-white"
             >
-              Apri pagina di pagamento
+              {t('checkout.openPaymentPage')}
             </Button>
           </DialogFooter>
         </DialogContent>

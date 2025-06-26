@@ -231,7 +231,7 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
                     </h3>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
-                    <p className="text-sm sm:text-base text-gray-600">{room.availableBeds.length} letti disponibili</p>
+                    <p className="text-sm sm:text-base text-gray-600">{t('room.availableBedsDisplay', { count: room.availableBeds.length })}</p>
                     {roomGuests.length > 0 && (
                       <>
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs sm:text-sm">
@@ -987,6 +987,7 @@ export default function BookingPage() {
           onBackToRooms={handleBackToRooms}
           onServicesChange={setAdditionalServicesCost}
           isAdminBooking={isAdminBooking}
+          t={t}
         />
       )}
     </main>

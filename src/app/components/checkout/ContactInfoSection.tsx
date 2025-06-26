@@ -32,6 +32,7 @@ export interface ContactDetails {
 interface ContactInfoSectionProps {
   initialDetails?: Partial<ContactDetails>;
   onContactInfoChange: (details: ContactDetails) => void;
+  t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
 // Email validation schema
@@ -39,7 +40,8 @@ const emailSchema = z.string().email({ message: "Email non valido" });
 
 const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({ 
   initialDetails = {}, 
-  onContactInfoChange 
+  onContactInfoChange,
+  t
 }) => {
   const [customerName, setCustomerName] = useState(initialDetails.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(initialDetails.customerPhone || '');
@@ -104,11 +106,11 @@ const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        setEmailError(error.errors[0].message);
+        setEmailError(t('contactInfo.invalidEmail'));
       }
       return false;
     }
-  }, []);
+  }, [t]);
 
   // Effect to DEBOUNCE calculation and callback
   useEffect(() => {
@@ -162,35 +164,35 @@ const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
 
   return (
     <section>
-      <h2 className="text-xl font-semibold mb-4">6. Referente della prenotazione</h2>
+      <h2 className="text-xl font-semibold mb-4">{t('contactInfo.title')}</h2>
       <p className="text-gray-600 mb-4">
-        Inserisci le informazioni di contatto del referente della prenotazione.
+        {t('contactInfo.description')}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div className="space-y-2">
-          <Label htmlFor="customer-name">Nome e cognome *</Label>
+          <Label htmlFor="customer-name">{t('contactInfo.nameLabel')} *</Label>
           <Input 
             id="customer-name"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Nome e cognome"
+            placeholder={t('contactInfo.namePlaceholder')}
             required
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="customer-phone">Telefono *</Label>
+          <Label htmlFor="customer-phone">{t('contactInfo.phoneLabel')} *</Label>
           <Input 
             id="customer-phone"
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
-            placeholder="Telefono"
+            placeholder={t('contactInfo.phonePlaceholder')}
             required
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="customer-email">Indirizzo email *</Label>
+          <Label htmlFor="customer-email">{t('contactInfo.emailLabel')} *</Label>
           <Input 
             id="customer-email"
             type="email" // Use email type for better browser validation/input modes
@@ -201,7 +203,7 @@ const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
               if (emailError) setEmailError(null); 
             }}
             onBlur={() => validateEmail(customerEmail)} // Keep validation on blur
-            placeholder="Indirizzo email"
+            placeholder={t('contactInfo.emailPlaceholder')}
             className={emailError ? "border-red-500" : ""}
             required
           />
@@ -213,20 +215,20 @@ const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="space-y-2">
-          <Label htmlFor="customer-country">Il tuo paese *</Label>
+          <Label htmlFor="customer-country">{t('contactInfo.countryLabel')} *</Label>
           <Select 
             value={selectedCountry}
             onValueChange={setSelectedCountry}
             required
           >
             <SelectTrigger id="customer-country" className="w-full">
-              <SelectValue placeholder="Seleziona un paese" />
+              <SelectValue placeholder={t('contactInfo.countryPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {countriesLoading ? (
-                <SelectItem value="loading" disabled>Caricamento paesi...</SelectItem>
+                <SelectItem value="loading" disabled>{t('contactInfo.loadingCountries')}</SelectItem>
               ) : countries.length === 0 ? (
-                 <SelectItem value="error" disabled>Errore caricamento paesi</SelectItem>
+                 <SelectItem value="error" disabled>{t('contactInfo.errorLoadingCountries')}</SelectItem>
               ) : (
                 countries.map(country => (
                   <SelectItem key={country.code} value={country.code}>
@@ -240,20 +242,20 @@ const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
         
         {selectedCountry === 'IT' && (
           <div className="space-y-2">
-            <Label htmlFor="customer-region">Regione *</Label>
+            <Label htmlFor="customer-region">{t('contactInfo.regionLabel')} *</Label>
             <Select 
               value={selectedRegion}
               onValueChange={setSelectedRegion}
               required={selectedCountry === 'IT'} // Only required if Italy is selected
             >
               <SelectTrigger id="customer-region" className="w-full">
-                <SelectValue placeholder="Seleziona una regione" />
+                <SelectValue placeholder={t('contactInfo.regionPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {regionsLoading ? (
-                  <SelectItem value="loading" disabled>Caricamento regioni...</SelectItem>
+                  <SelectItem value="loading" disabled>{t('contactInfo.loadingRegions')}</SelectItem>
                 ) : italianRegions.length === 0 ? (
-                  <SelectItem value="error" disabled>Errore caricamento regioni</SelectItem>
+                  <SelectItem value="error" disabled>{t('contactInfo.errorLoadingRegions')}</SelectItem>
                 ) : (
                   italianRegions.map(region => (
                     <SelectItem key={region.id} value={region.id.toString()}>
