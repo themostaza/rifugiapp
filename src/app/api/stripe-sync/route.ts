@@ -6,17 +6,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    // Protezione: verifica che la chiamata provenga da Vercel Cron
-    const cronTimezone = request.headers.get('vercel-cron-timezone');
-    const userAgent = request.headers.get('user-agent');
-    
-    // Verifica che provenga da Vercel Cron (solo in produzione)
-    if (process.env.NODE_ENV === 'production' && !cronTimezone && !userAgent?.includes('vercel')) {
-      return NextResponse.json({ error: 'Unauthorized - Only Vercel Cron allowed' }, { status: 401 });
-    }
-
     // Recupera fino alle ultime 100 charge
     const charges: Stripe.ApiList<Stripe.Charge> = await stripe.charges.list({ limit: 100 });
     const allCharges = charges.data;
