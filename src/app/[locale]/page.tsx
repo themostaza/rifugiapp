@@ -297,7 +297,8 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
             getUnassignedGuests().adults > 0 || 
             getUnassignedGuests().children > 0 || 
             getUnassignedGuests().infants > 0 ||
-            calculateTotalPrice().total <= 0
+            calculateTotalPrice().total <= 0 ||
+            assignedGuests.some(guest => guest.bedId === null)
           }
           onClick={onProceedToCheckout}
         >
