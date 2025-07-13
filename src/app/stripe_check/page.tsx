@@ -41,7 +41,7 @@ interface VerifyResult {
 
 export default function StripeSyncPage() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<null | { success?: boolean; inserted?: number; error?: string }>(null);
+  const [result, setResult] = useState<null | { success?: boolean; inserted?: number; totalFetched?: number; existing?: number; error?: string }>(null);
 
   // Stato per la verifica
   const [verifyLoading, setVerifyLoading] = useState(false);
@@ -104,11 +104,13 @@ export default function StripeSyncPage() {
       >
         {loading ? "Sincronizzazione in corso..." : "Avvia Sync Stripe"}
       </button>
-      {result && (
+              {result && (
         <div style={{ marginTop: 24 }}>
           {result.success ? (
             <div style={{ color: "green" }}>
               Sync completata!<br />
+              Transazioni fetchate da Stripe: <b>{result.totalFetched || 0}</b><br />
+              Transazioni già esistenti: <b>{result.existing || 0}</b><br />
               Transazioni inserite: <b>{result.inserted}</b>
             </div>
           ) : (
