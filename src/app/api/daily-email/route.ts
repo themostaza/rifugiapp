@@ -89,6 +89,7 @@ interface DayDetailsResponse {
   totalBlockedBeds: number | null;
   blockedBedDetails: { bedId: number; roomReservationId: number }[];
   roomBedDetails: { id: number; name: string; roomId: number }[];
+  allRoomsData: { id: number; description: string | null; RoomLinkBed: { count: number }[]; order?: number | null }[];
 }
 // --- End Type Definitions ---
 
@@ -281,6 +282,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
+  sectionHeader: {
+    backgroundColor: '#e3f2fd',
+    padding: 6,
+    marginBottom: 4,
+    marginTop: 8,
+    borderRadius: 3,
+    border: '1px solid #2196f3',
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#1976d2',
+    textAlign: 'center',
+  },
+  sectionSubtitle: {
+    fontSize: 9,
+    color: '#424242',
+    textAlign: 'center',
+    marginTop: 2,
+  },
 });
 
 // --- UTILITY FUNCTIONS ---
@@ -339,7 +360,8 @@ async function fetchDayDetails(supabase: SupabaseClient, dateString: string): Pr
         availableBeds: null,
         totalBlockedBeds: null,
         blockedBedDetails: [],
-        roomBedDetails: []
+        roomBedDetails: [],
+        allRoomsData: []
       };
     }
 
@@ -476,7 +498,7 @@ async function fetchDayDetails(supabase: SupabaseClient, dateString: string): Pr
     // Calcolo availableBeds (come prima)
     const { data: roomsData } = await supabase
       .from('Room')
-      .select('id, RoomLinkBed(count), "order"');
+      .select('id, description, RoomLinkBed(count), "order"');
     let totalCapacity = 0;
     if (roomsData) {
       totalCapacity = (roomsData as { RoomLinkBed: { count: number }[] }[]).reduce((sum: number, room) => {
@@ -495,7 +517,8 @@ async function fetchDayDetails(supabase: SupabaseClient, dateString: string): Pr
       availableBeds,
       totalBlockedBeds,
       blockedBedDetails,
-      roomBedDetails
+      roomBedDetails,
+      allRoomsData: roomsData || []
     };
   } catch (error) {
     console.error("Error fetching day details:", error);
@@ -505,7 +528,7 @@ async function fetchDayDetails(supabase: SupabaseClient, dateString: string): Pr
 
 // --- LOGICA UNIFICATA: Calcolo roomOccupancySummary e bedStatusesByRoom ---
 function calculateRoomOccupancySummaryAndBedStatuses(dayDetails: DayDetailsResponse) {
-  const { detailedReservations, blockedBedsByRoom, blockedBedDetails, roomBedDetails } = dayDetails;
+  const { detailedReservations, blockedBedsByRoom, blockedBedDetails, roomBedDetails, allRoomsData } = dayDetails;
 
   // 1. Room Occupancy Summary
   const occupancy = {} as {
@@ -520,25 +543,30 @@ function calculateRoomOccupancySummaryAndBedStatuses(dayDetails: DayDetailsRespo
     };
   };
 
+  // Initialize occupancy with ALL rooms first, even if they have no reservations
+  allRoomsData.forEach((room) => {
+    if (room && room.id) {
+      const maxBeds = room.RoomLinkBed?.[0]?.count ?? 0;
+      occupancy[room.id] = {
+        id: room.id,
+        description: room.description || `Stanza ${room.id}`,
+        bedCount: maxBeds,
+        booked: { adults: 0, children: 0, infants: 0 },
+        totalBooked: 0,
+        blockedCount: blockedBedsByRoom[room.id] || 0,
+        order: room.order ?? null,
+      };
+    }
+  });
+
+  // Now process reservations to update occupancy
   detailedReservations.forEach((reservation: DetailedReservation) => {
     reservation.RoomReservation?.forEach((rr: RoomReservation) => {
       rr.RoomReservationSpec?.forEach((spec: RoomReservationSpec) => {
         const roomLinkBed = spec.RoomLinkBed;
         const room = roomLinkBed?.Room;
         const guestDivision = spec.GuestDivision;
-        if (room && room.id) {
-          if (!occupancy[room.id]) {
-            const maxBeds = room.RoomLinkBed?.[0]?.count ?? 0;
-            occupancy[room.id] = {
-              id: room.id,
-              description: room.description || `Stanza ${room.id}`,
-              bedCount: maxBeds,
-              booked: { adults: 0, children: 0, infants: 0 },
-              totalBooked: 0,
-              blockedCount: blockedBedsByRoom[room.id] || 0,
-              order: room.order ?? null,
-            };
-          }
+        if (room && room.id && occupancy[room.id]) {
           const divisionTitle = guestDivision?.title?.toLowerCase() || '';
           if (divisionTitle.includes('adult')) {
             occupancy[room.id].booked.adults++;
@@ -670,6 +698,38 @@ async function generateReservationListPdf(date: Date, detailedReservations: Deta
   try {
     console.log('[daily-email] Creating reservation PDF with @react-pdf/renderer...');
     const formattedDate = formatDateForPdf(date);
+    const todayString = date.toISOString().split('T')[0];
+
+    // Separate reservations into remainders and arrivals
+    const remainders = detailedReservations.filter(res => {
+      const checkInDate = res.dayFrom?.split('T')[0];
+      return checkInDate && checkInDate < todayString;
+    });
+
+    const arrivals = detailedReservations.filter(res => {
+      const checkInDate = res.dayFrom?.split('T')[0];
+      return checkInDate === todayString;
+    });
+
+    // Sort remainders by check-in date (oldest first), then arrivals by check-in time
+    remainders.sort((a, b) => {
+      const dateA = a.dayFrom?.split('T')[0] || '';
+      const dateB = b.dayFrom?.split('T')[0] || '';
+      return dateA.localeCompare(dateB);
+    });
+
+    arrivals.sort((a, b) => {
+      const timeA = a.dayFrom || '';
+      const timeB = b.dayFrom || '';
+      return timeA.localeCompare(timeB);
+    });
+
+    // Combine: remainders first, then arrivals
+    const orderedReservations = [...remainders, ...arrivals];
+
+    console.log('[daily-email] Reservations breakdown:');
+    console.log('[daily-email] - Remainders (check-in < today):', remainders.length);
+    console.log('[daily-email] - Arrivals (check-in = today):', arrivals.length);
 
     // Helper to generate QR code as data URL (base64)
     async function getQrDataUrl(external_id: string | null): Promise<string | null> {
@@ -685,7 +745,7 @@ async function generateReservationListPdf(date: Date, detailedReservations: Deta
 
     // Pre-generate all QR codes (parallel)
     const qrCodes: (string | null)[] = await Promise.all(
-      detailedReservations.map(res => getQrDataUrl(res.external_id || null))
+      orderedReservations.map(res => getQrDataUrl(res.external_id || null))
     );
 
     // Create PDF document
@@ -697,10 +757,16 @@ async function generateReservationListPdf(date: Date, detailedReservations: Deta
           React.createElement(Text, { style: styles.subtitle }, formattedDate)
         ),
         // Content
-        detailedReservations.length === 0
+        orderedReservations.length === 0
           ? React.createElement(Text, { style: styles.noData }, 'Nessuna prenotazione trovata per questa data.')
           : React.createElement(View, {},
-              ...detailedReservations.map((reservation, index) => {
+              // Remainders section
+              ...(remainders.length > 0 ? [
+                React.createElement(View, { key: 'remainders-header', style: styles.sectionHeader },
+                  React.createElement(Text, { style: styles.sectionTitle }, '🏠 RIMANENZE'),
+                  React.createElement(Text, { style: styles.sectionSubtitle }, `${remainders.length} prenotazione${remainders.length === 1 ? '' : 'i'} con check-in precedente`)
+                ),
+                ...remainders.map((reservation, index) => {
                 const totalGuests = reservation.guestBreakdown.adults + reservation.guestBreakdown.children + reservation.guestBreakdown.infants;
                 const guestBreakdown = `A:${reservation.guestBreakdown.adults}, B:${reservation.guestBreakdown.children}, N:${reservation.guestBreakdown.infants}`;
                 const paymentStatus = reservation.isCreatedByAdmin ? 'admin' : reservation.isPaid ? 'paid' : 'notpaid';
@@ -798,6 +864,112 @@ async function generateReservationListPdf(date: Date, detailedReservations: Deta
                   )
                 );
               })
+              ] : []),
+              // Arrivals section
+              ...(arrivals.length > 0 ? [
+                React.createElement(View, { key: 'arrivals-header', style: styles.sectionHeader },
+                  React.createElement(Text, { style: styles.sectionTitle }, '🚀 ARRIVI DI OGGI'),
+                  React.createElement(Text, { style: styles.sectionSubtitle }, `${arrivals.length} prenotazione${arrivals.length === 1 ? '' : 'i'} con check-in oggi`)
+                ),
+                ...arrivals.map((reservation, index) => {
+                const totalGuests = reservation.guestBreakdown.adults + reservation.guestBreakdown.children + reservation.guestBreakdown.infants;
+                const guestBreakdown = `A:${reservation.guestBreakdown.adults}, B:${reservation.guestBreakdown.children}, N:${reservation.guestBreakdown.infants}`;
+                const paymentStatus = reservation.isCreatedByAdmin ? 'admin' : reservation.isPaid ? 'paid' : 'notpaid';
+                const reservationType = reservation.reservationType === 'hb' ? 'Mezza Pensione' : reservation.reservationType === 'bb' ? 'Bed & Breakfast' : reservation.reservationType || 'N/A';
+                const qrDataUrl = qrCodes[remainders.length + index]; // Adjust index for QR codes
+
+                // Color for payment status
+                let statusColor = '#ff0000'; // not paid
+                if (paymentStatus === 'paid') statusColor = '#008000';
+                if (paymentStatus === 'admin') statusColor = '#800080';
+
+                return React.createElement(View, {
+                  key: reservation.id,
+                  style: {
+                    border: '1px solid #cccccc',
+                    borderRadius: 2,
+                    marginBottom: 3,
+                    padding: 3,
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    backgroundColor: '#f0f8ff', // Slightly different background for arrivals
+                  }
+                },
+                  // QR code (left)
+                  React.createElement(View, { style: { width: 35, height: 35, marginRight: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', border: '1px solid #eee', borderRadius: 2 } },
+                    qrDataUrl
+                      ? React.createElement(Image, { src: qrDataUrl, style: { width: 32, height: 32 } })
+                      : React.createElement(Text, { style: { fontSize: 7, color: '#888', textAlign: 'center' } }, 'N/A')
+                  ),
+                  // Details (right)
+                  React.createElement(View, { style: { flex: 1, flexDirection: 'column' } },
+                    React.createElement(Text, { style: { fontSize: 10, fontWeight: 'bold', marginBottom: 0 } }, `Pren. #${reservation.id} - ${reservation.name || 'N/A'} ${reservation.surname || ''}`),
+                    // Grid of details
+                    React.createElement(View, { style: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 0, marginTop: 0 } },
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0 } },
+                        React.createElement(Text, {}, `Check-in: ${formatDateForPdf(reservation.dayFrom)}`)
+                      ),
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0 } },
+                        React.createElement(Text, {}, `Check-out: ${formatDateForPdf(reservation.dayTo)}`)
+                      ),
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0 } },
+                        React.createElement(Text, {}, `Ospiti: ${totalGuests} (${guestBreakdown})`)
+                      ),
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0 } },
+                        React.createElement(Text, {}, `Tipo: ${reservationType}`)
+                      ),
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0 } },
+                        React.createElement(Text, {}, `Prezzo: ${formatPriceForPdf(reservation.totalPrice)}`)
+                      ),
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0, flexDirection: 'row', alignItems: 'center' } },
+                        React.createElement(Text, { style: { color: statusColor, fontWeight: 'bold' } },
+                          paymentStatus === 'admin' ? 'Admin' : paymentStatus === 'paid' ? 'Pagata' : 'Non Pagata'
+                        )
+                      ),
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0 } },
+                        React.createElement(Text, {}, `Email: ${reservation.mail || 'N/A'}`)
+                      ),
+                      React.createElement(View, { style: { width: '50%', marginBottom: 0, marginTop: 0 } },
+                        React.createElement(Text, {}, `Tel: ${reservation.phone || 'N/A'}`)
+                      )
+                    ),
+                    // Note box
+                    reservation.note ? React.createElement(View, { style: { marginTop: 1, padding: 2, backgroundColor: '#fff', borderRadius: 2, border: '1px dotted #000' } },
+                      React.createElement(Text, { style: { fontSize: 7, color: '#000' } }, `Note: ${reservation.note}`)
+                    ) : null,
+                    // Extra services box (sotto le note, stile piccolo)
+                    (() => {
+                      const extraServices: { description: string; quantity: number }[] = [];
+                      if (reservation.RoomReservation) {
+                        for (const rr of reservation.RoomReservation) {
+                          if (rr.RoomReservationSpec) {
+                            for (const spec of rr.RoomReservationSpec) {
+                              if (spec.extraServices && spec.extraServices.length > 0) {
+                                extraServices.push(...spec.extraServices);
+                              }
+                            }
+                          }
+                        }
+                      }
+                      // Mostra ogni servizio una sola volta per descrizione (come arriva dal db)
+                      const seen = new Set<string>();
+                      const uniqueExtras = extraServices.filter(es => {
+                        if (seen.has(es.description)) return false;
+                        seen.add(es.description);
+                        return true;
+                      });
+                      const extraString = uniqueExtras.map(es => `${es.description} x${es.quantity}`).join(', ');
+                      if (extraString) {
+                        return React.createElement(View, { style: { marginTop: 1, padding: 2, backgroundColor: '#fff', borderRadius: 2, border: '1px dotted #888' } },
+                          React.createElement(Text, { style: { fontSize: 7, color: '#444' } }, `Extra: ${extraString}`)
+                        );
+                      }
+                      return null;
+                    })()
+                  )
+                );
+              })
+              ] : [])
             )
       )
     );
@@ -944,12 +1116,20 @@ function generateDailyEmailContent(data: {
     sum + res.guestBreakdown.adults + res.guestBreakdown.children + res.guestBreakdown.infants, 0
   );
 
-  // Calculate arrivals (reservations starting today)
+  // Calculate arrivals and remainders (same logic as PDF generation)
   const todayString = date.toISOString().split('T')[0];
   const arrivingReservations = dayDetails.detailedReservations.filter(res => 
     res.dayFrom?.split('T')[0] === todayString
   );
   const arrivingGuests = arrivingReservations.reduce((sum, res) => 
+    sum + res.guestBreakdown.adults + res.guestBreakdown.children + res.guestBreakdown.infants, 0
+  );
+
+  const remainingReservations = dayDetails.detailedReservations.filter(res => {
+    const checkInDate = res.dayFrom?.split('T')[0];
+    return checkInDate && checkInDate < todayString;
+  });
+  const remainingGuests = remainingReservations.reduce((sum, res) => 
     sum + res.guestBreakdown.adults + res.guestBreakdown.children + res.guestBreakdown.infants, 0
   );
 
@@ -971,7 +1151,10 @@ function generateDailyEmailContent(data: {
             <strong>Totale ospiti:</strong> ${totalGuests}
           </li>
           <li style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
-            <strong>Check-in di oggi:</strong> ${arrivingReservations.length} prenotazioni (${arrivingGuests} ospiti)
+            <strong>🏠 Rimanenze:</strong> ${remainingReservations.length} prenotazioni (${remainingGuests} ospiti)
+          </li>
+          <li style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+            <strong>🚀 Check-in di oggi:</strong> ${arrivingReservations.length} prenotazioni (${arrivingGuests} ospiti)
           </li>
           <li style="padding: 8px 0;">
             <strong>Letti disponibili:</strong> ${dayDetails.availableBeds || 'N/A'}
@@ -995,6 +1178,7 @@ ${dateString}
 STATISTICHE DI OGGI:
 - Totale prenotazioni attive: ${dayDetails.detailedReservations.length}
 - Totale ospiti: ${totalGuests}
+- Rimanenze: ${remainingReservations.length} prenotazioni (${remainingGuests} ospiti)
 - Check-in di oggi: ${arrivingReservations.length} prenotazioni (${arrivingGuests} ospiti)
 - Letti disponibili: ${dayDetails.availableBeds || 'N/A'}
 
@@ -1150,8 +1334,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Recipients of the daily report
-    const recipients = ['rifugiodibona@gmail.com', 'paolo@larin.it'];
-    // const recipients = [ 'paolo@larin.it'];
+    //const recipients = ['rifugiodibona@gmail.com', 'paolo@larin.it'];
+    const recipients = [ 'paolo@larin.it'];
     
     console.log('[daily-email] Sending emails with PDF attachments using Resend directly...');
     console.log('[daily-email] Email payload attachments:', {
