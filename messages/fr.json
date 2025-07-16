@@ -175,7 +175,11 @@
     "bookingConfirmedMessage": "Votre réservation au Refuge Angelo Dibona a été confirmée avec succès. Un email de confirmation a été envoyé à votre adresse email",
     "unknown": "Inconnu",
     "confirmed": "Réservation confirmée !",
-    "cancelled": "Réservation annulée"
+    "cancelled": "Réservation annulée",
+    "saveLinkTitle": "Enregistrez ce lien",
+    "saveLinkMessage": "Enregistrez ce lien pour accéder à votre réservation dans le futur, même si vous avez reçu un email récapitulatif",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié !"
   },
   "common": {
     "cancel": "Annuler",

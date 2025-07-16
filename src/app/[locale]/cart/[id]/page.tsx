@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Check, Download, ArrowRight, Mail, AlertCircle, Info, Clock } from 'lucide-react'
+import { Calendar, Check, Download, ArrowRight, Mail, AlertCircle, Info, Clock, Copy } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
 import Header from '@/components/header/header'
@@ -93,6 +93,7 @@ export default function ConfirmationPage() {
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   
   // Traduzioni principali
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -538,6 +539,25 @@ export default function ConfirmationPage() {
     }
   };
 
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      // Fallback method
+      const textArea = document.createElement('textarea');
+      textArea.value = window.location.href;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -618,6 +638,30 @@ export default function ConfirmationPage() {
                 )
               }
             </CardDescription>
+            
+            {/* Save Link Banner */}
+            <div className="mt-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Info className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm sm:text-base text-blue-800 mb-1">
+                    {translations.saveLinkTitle || 'Salva questo link'}
+                  </p>
+                  <p className="text-xs sm:text-sm text-blue-700 mb-2">
+                    {translations.saveLinkMessage || 'Salva questo link per accedere alla tua prenotazione in futuro, anche se ti è stata inviata una mail riepilogativa'}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleCopyLink}
+                    className="h-7 sm:h-8 text-xs sm:text-sm border-blue-300 text-blue-700 hover:bg-blue-100"
+                  >
+                    <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    {linkCopied ? (translations.linkCopied || 'Link copiato!') : (translations.copyLink || 'Copia link')}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent className="space-y-4 sm:space-y-6 pt-4">

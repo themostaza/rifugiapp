@@ -175,7 +175,11 @@
     "bookingConfirmedMessage": "La tua prenotazione presso Rifugio Angelo Dibona è stata confermata con successo. Un'email di conferma è stata inviata al tuo indirizzo email",
     "unknown": "Sconosciuto",
     "confirmed": "Prenotazione confermata!",
-    "cancelled": "Prenotazione cancellata"
+    "cancelled": "Prenotazione cancellata",
+    "saveLinkTitle": "Salva questo link",
+    "saveLinkMessage": "Salva questo link per accedere alla tua prenotazione in futuro, anche se ti è stata inviata una mail riepilogativa",
+    "copyLink": "Copia link",
+    "linkCopied": "Link copiato!"
   },
   "common": {
     "cancel": "Annulla",

@@ -175,7 +175,11 @@
     "bookingConfirmedMessage": "Ihre Buchung bei der Angelo Dibona Hütte wurde erfolgreich bestätigt. Eine Bestätigungs-E-Mail wurde an Ihre E-Mail-Adresse gesendet",
     "unknown": "Unbekannt",
     "confirmed": "Buchung bestätigt!",
-    "cancelled": "Buchung storniert"
+    "cancelled": "Buchung storniert",
+    "saveLinkTitle": "Speichern Sie diesen Link",
+    "saveLinkMessage": "Speichern Sie diesen Link, um in Zukunft auf Ihre Buchung zuzugreifen, auch wenn Sie eine Zusammenfassung per E-Mail erhalten haben",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert!"
   },
   "common": {
     "cancel": "Abbrechen",
