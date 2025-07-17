@@ -218,7 +218,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-gray-100 p-4 rounded-lg">
       <div className="flex items-center gap-2 mb-2">
         <Lock className="h-4 w-4 text-gray-700" />
         <h3 className="font-medium text-sm sm:text-base">{t('bedBlocking.privacySupplement')}</h3>
@@ -237,7 +237,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
         </TooltipProvider>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+      <div className="bg-gray-100 rounded-lg p-3 sm:p-4">
         <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
           {t('bedBlocking.paragraph')}
         </p>
@@ -252,7 +252,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
             return (
               <div 
                 key={date} 
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-white rounded-lg border hover:border-gray-300 gap-2 sm:gap-0"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-gray-200 rounded-lg border hover:border-gray-300 gap-2 sm:gap-0"
               >
                 <div className="font-medium text-sm sm:text-base">
                   {t('bedBlocking.nightOf', { date: formatDate(date) })}
@@ -266,7 +266,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                       variant={blockedBedsForDate.length > 0 ? "secondary" : "outline"} 
                       size="sm"
                       className={`flex items-center justify-between w-full sm:w-auto min-w-40 text-sm ${
-                        blockedBedsForDate.length > 0 ? "bg-gray-50 text-gray-600 hover:bg-blue-100" : ""
+                        blockedBedsForDate.length > 0 ? "bg-gray-300 text-gray-600 hover:bg-blue-100" : ""
                       }`}
                     >
                       <span>{getBlockedBedsDescription(date)}</span>
@@ -299,7 +299,7 @@ const BedBlocking: React.FC<BedBlockingProps> = ({
                                 key={bed.id} 
                                 className={`
                                   p-2 sm:p-3 rounded-lg border flex items-center justify-between
-                                  ${isBlocked ? 'bg-blue-50 border-gray-200' : 'bg-white'}
+                                  ${isBlocked ? 'bg-blue-50 border-gray-200' : 'bg-gray-100'}
                                   hover:border-blue-300 cursor-pointer transition-colors
                                 `}
                                 onClick={() => handleBedSelection(date, bed.id, !isBlocked)}

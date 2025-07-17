@@ -386,11 +386,9 @@ const RoomContent = ({
 
   return (
     <div className="space-y-6">
-      <ImageCarousel images={room.images} />
-      
-      <div className="space-y-4">
-        {/* Mappa dei letti */}
-        <div className="bg-white rounded-lg sm:border">
+      {/* Mappa dei letti */}
+      <div className="bg-white rounded-lg sm:border">
+          <div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:mb-4 p-2 sm:p-4 gap-2">
             <h3 className="text-lg font-medium">{t('room.bedMapTitle')}</h3>
             
@@ -412,6 +410,17 @@ const RoomContent = ({
               </TooltipProvider>
             )}
           </div>
+          <div className="text-sm text-gray-600 mb-2">
+        <strong>{t('bedMap.title')}</strong>{' '}
+        <span className="px-3 py-1 rounded-sm border-2 text-sm bg-green-100 text-green-800 border-green-200">
+          {t('bedMap.free')}
+        </span>{' '}
+        <span className="px-3 py-1 rounded-sm border-2 text-sm bg-red-100 text-red-800 border-red-200">
+          {t('bedMap.occupied')}
+        </span>
+      </div>
+          </div>
+          
           
           <BedMap 
             roomId={room.id} 
@@ -421,6 +430,10 @@ const RoomContent = ({
             t={t}
           />
         </div>
+      <ImageCarousel images={room.images} />
+      
+      <div className="space-y-4">
+        
         
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
           <BedSelection 
@@ -469,7 +482,7 @@ const RoomContent = ({
         )}
 
         {/* Componente per il blocco dei letti */}
-        <div className="bg-white p-4 rounded-lg border">
+        <div className="bg-white rounded-lg border-0">
           <BedBlocking 
             roomId={room.id}
             nightAvailability={availabilityByNight}

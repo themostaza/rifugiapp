@@ -170,18 +170,25 @@ const BedMap: React.FC<BedMapProps> = ({
   // Visualizzazione con navigazione tra notti
   return (
     <div className="p-4 space-y-4">
+      
+
       <div className="flex items-center justify-between mb-2">
         <Button
           variant="outline"
           size="sm"
           onClick={() => setSelectedNightIndex(prev => Math.max(0, prev - 1))}
           disabled={selectedNightIndex === 0}
+          className={`${
+            selectedNightIndex === 0 
+              ? '' 
+              : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
+          }`}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         
         <div className="text-center">
-          <span className="font-medium">
+          <span className="text-base font-semibold">
             {t('bedMap.nightOf', { date: format(currentDate, 'd MMMM yyyy', { locale: it }) })}
           </span>
           <span className="text-xs text-gray-500 block">
@@ -194,6 +201,11 @@ const BedMap: React.FC<BedMapProps> = ({
           size="sm"
           onClick={() => setSelectedNightIndex(prev => Math.min(availabilityByNight.length - 1, prev + 1))}
           disabled={selectedNightIndex === availabilityByNight.length - 1}
+          className={`${
+            selectedNightIndex === availabilityByNight.length - 1 
+              ? '' 
+              : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
+          }`}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>

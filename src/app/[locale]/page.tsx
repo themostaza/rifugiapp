@@ -167,7 +167,7 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
   allBlockedBeds,
   t
 }) => {
-  
+  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
 
   const getUnassignedGuests = () => {
     const assigned = {
@@ -212,10 +212,16 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
         </div>
       </div>
       
-      <Accordion type="multiple" className="space-y-2">
+      <Accordion 
+        type="multiple" 
+        className="space-y-2"
+        value={openAccordions}
+        onValueChange={setOpenAccordions}
+      >
         {rooms.map((room) => {
           const roomGuests = getRoomGuests(room.roomId);
           const price = calculateRoomPrice(room, room.roomId);
+          const isOpen = openAccordions.includes(room.roomId.toString());
           
           return (
             <AccordionItem
@@ -224,7 +230,7 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
               className="border rounded-lg overflow-hidden"
             >
               <div className="flex items-center w-full min-h-[48px] hover:bg-gray-100">
-                <AccordionTrigger className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full px-2 sm:px-4 py-2 sm:py-0">
+                <AccordionTrigger className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full px-2 sm:px-4 py-2 sm:py-0 [&>svg]:hidden">
                   <div className="flex items-center gap-2 sm:gap-4">
                     <h3 className="text-base sm:text-lg font-semibold mr-2">
                       {room.description}
@@ -241,6 +247,11 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
                           €{price.totalPrice.toFixed(2)}
                         </span>
                       </>
+                    )}
+                    {isOpen ? (
+                      <Minus className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Plus className="h-4 w-4 text-gray-500" />
                     )}
                   </div>
                 </AccordionTrigger>
@@ -919,54 +930,61 @@ export default function BookingPage() {
           )}
 
           {showResults && !searchError && (
-            <Card className="mt-4 sm:mt-0 sm:p-6 max-w-4xl mx-auto border-0 shadow-none sm:border sm:shadow">
-              <div className="mb-4">
-                <p className="mb-3 text-gray-700 text-sm sm:text-base">
-                  <span dangerouslySetInnerHTML={{__html: t('booking.step1')}}></span><br/>
-                  <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_hb')}}></span><br/>
-                  <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_bb')}}></span>
-                </p>
-                <Select 
-                  value={pensionType} 
-                  onValueChange={(value: string) => {
-                    if (value === 'bb' || value === 'hb') {
-                      setPensionType(value as 'bb' | 'hb');
-                    }
+            <>
+              {/* Primo Card - Selezione tipo pensione */}
+              <Card className="mt-4 sm:mt-0 sm:p-6 max-w-4xl mx-auto border-0 shadow-none sm:border sm:shadow">
+                <div>
+                  <p className="mb-3 text-gray-700 text-sm sm:text-base">
+                    <span dangerouslySetInnerHTML={{__html: t('booking.step1')}}></span><br/>
+                    <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_hb')}}></span><br/>
+                    <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_bb')}}></span>
+                  </p>
+                  <Select 
+                    value={pensionType} 
+                    onValueChange={(value: string) => {
+                      if (value === 'bb' || value === 'hb') {
+                        setPensionType(value as 'bb' | 'hb');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-auto">
+                      <SelectValue placeholder={t('booking.selectTreatment')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bb">Bed & Breakfast</SelectItem>
+                      <SelectItem value="hb">{language === 'it' ? 'Mezza Pensione' : language === 'en' ? 'Half Board' : language === 'fr' ? 'Demi-pension' : language === 'de' ? 'Halbpension' : language === 'es' ? 'Media pensión' : 'Mezza Pensione'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </Card>
+
+              {/* Secondo Card - Lista stanze */}
+              <Card className="sm:p-6 max-w-4xl mx-auto border-0 shadow-none sm:border sm:shadow">
+                <span className="text-sm sm:text-base mb-4 block">{t('booking.step2')}</span>
+                <RoomList 
+                  rooms={rooms}
+                  onSelect={handleRoomSelect}
+                  totalGuests={{
+                    adults,
+                    children,
+                    infants
                   }}
-                >
-                  <SelectTrigger className="w-full sm:w-auto">
-                    <SelectValue placeholder={t('booking.selectTreatment')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bb">Bed & Breakfast</SelectItem>
-                    <SelectItem value="hb">{language === 'it' ? 'Mezza Pensione' : language === 'en' ? 'Half Board' : language === 'fr' ? 'Demi-pension' : language === 'de' ? 'Halbpension' : language === 'es' ? 'Media pensión' : 'Mezza Pensione'}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <span className="text-sm sm:text-base">{t('booking.step2')}</span>
-              <RoomList 
-                rooms={rooms}
-                onSelect={handleRoomSelect}
-                totalGuests={{
-                  adults,
-                  children,
-                  infants
-                }}
-                assignedGuests={assignedGuests}
-                onGuestAssignment={setAssignedGuests}
-                pensionType={pensionType}
-                availabilityByNight={availabilityByNight}
-                checkIn={checkIn}
-                checkOut={checkOut}
-                guestTypes={guestTypes}
-                onPrivacyCostChange={handlePrivacyCostChange}
-                onProceedToCheckout={handleProceedToCheckout}
-                onBlockedBedsChange={handleBlockedBedsChange}
-                calculateTotalPrice={calculateTotalPrice}
-                allBlockedBeds={allBlockedBeds}
-                t={t}
-              />
-            </Card>
+                  assignedGuests={assignedGuests}
+                  onGuestAssignment={setAssignedGuests}
+                  pensionType={pensionType}
+                  availabilityByNight={availabilityByNight}
+                  checkIn={checkIn}
+                  checkOut={checkOut}
+                  guestTypes={guestTypes}
+                  onPrivacyCostChange={handlePrivacyCostChange}
+                  onProceedToCheckout={handleProceedToCheckout}
+                  onBlockedBedsChange={handleBlockedBedsChange}
+                  calculateTotalPrice={calculateTotalPrice}
+                  allBlockedBeds={allBlockedBeds}
+                  t={t}
+                />
+              </Card>
+            </>
           )}
         </>
       ) : (
