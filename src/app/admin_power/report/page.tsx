@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Calendar as CalendarIcon } from 'lucide-react';
+import { Download, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -84,8 +84,14 @@ function toLocalYMD(date: Date) {
 const ReportsSection = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  
+  // State for future reservations
+  const [futureDateRange, setFutureDateRange] = useState<DateRange | undefined>(undefined);
+  const [futureCalendarOpen, setFutureCalendarOpen] = useState(false);
+  const [isDownloadingFuture, setIsDownloadingFuture] = useState(false);
 
   const isRangeSelected = !!dateRange?.from && !!dateRange?.to;
+  const isFutureRangeSelected = !!futureDateRange?.from && !!futureDateRange?.to;
 
   const formatRange = (from?: Date, to?: Date) => {
     if (!from && !to) return "Seleziona date check-in";
@@ -131,6 +137,47 @@ const ReportsSection = () => {
       margin: { top: 20 },
     });
     doc.save(`report_prenotazioni_${from}_${to}.pdf`);
+  };
+
+  const handleDownloadFuturePdf = async () => {
+    if (!futureDateRange?.from || !futureDateRange?.to) return;
+    
+    setIsDownloadingFuture(true);
+    try {
+      const fromDate = toLocalYMD(futureDateRange.from);
+      const toDate = toLocalYMD(futureDateRange.to);
+      
+      const response = await fetch('/api/prenotazioni-future', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fromDate,
+          toDate
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Errore nella generazione del PDF');
+      }
+
+      // Create download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Prenotazioni_Future_${fromDate}_${toDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Errore nel download del PDF:', error);
+      alert('Errore nel download del PDF delle prenotazioni future');
+    } finally {
+      setIsDownloadingFuture(false);
+    }
   };
 
   return (
@@ -188,19 +235,47 @@ const ReportsSection = () => {
 
       {/* Future Reservations Report */}
       <Card className="p-4">
-        <div className="flex justify-between items-center">
-          <h2 className=" font-medium">Report prenotazioni future</h2>
-          <Button 
-            variant="secondary"
-            className="flex items-center gap-2"
-            onClick={() => {
-              // API integration will go here
-              console.log('Send future reservations report');
-            }}
-          >
-            <Download className="h-4 w-4" />
-            Scarica
-          </Button>
+        <div className="flex flex-col gap-4">
+          <h2 className="font-medium mb-2">Report prenotazioni future</h2>
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div>
+              <Popover open={futureCalendarOpen} onOpenChange={setFutureCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full md:w-[260px] justify-start text-left font-normal border-gray-300"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formatRange(futureDateRange?.from, futureDateRange?.to)}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={futureDateRange}
+                    onSelect={setFutureDateRange}
+                    numberOfMonths={2}
+                    locale={it}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex flex-row gap-2 md:ml-8 mt-2 md:mt-0 self-end md:self-center">
+              <Button
+                variant="secondary"
+                className="flex items-center gap-2"
+                disabled={!isFutureRangeSelected || isDownloadingFuture}
+                onClick={handleDownloadFuturePdf}
+              >
+                {isDownloadingFuture ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {isDownloadingFuture ? 'Elaborazione...' : 'PDF'}
+              </Button>
+            </div>
+          </div>
         </div>
       </Card>
     </div>

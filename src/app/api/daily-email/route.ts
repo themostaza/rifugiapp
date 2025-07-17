@@ -284,14 +284,14 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     backgroundColor: '#e3f2fd',
-    padding: 6,
-    marginBottom: 4,
-    marginTop: 8,
-    borderRadius: 3,
+    padding: 3,
+    marginBottom: 2,
+    marginTop: 2,
+    borderRadius: 1,
     border: '1px solid #2196f3',
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 8,
     fontWeight: 'bold',
     color: '#1976d2',
     textAlign: 'center',
@@ -763,8 +763,8 @@ async function generateReservationListPdf(date: Date, detailedReservations: Deta
               // Remainders section
               ...(remainders.length > 0 ? [
                 React.createElement(View, { key: 'remainders-header', style: styles.sectionHeader },
-                  React.createElement(Text, { style: styles.sectionTitle }, '🏠 RIMANENZE'),
-                  React.createElement(Text, { style: styles.sectionSubtitle }, `${remainders.length} prenotazione${remainders.length === 1 ? '' : 'i'} con check-in precedente`)
+                  React.createElement(Text, { style: styles.sectionTitle }, 'RIMANENZE'),
+                  // React.createElement(Text, { style: styles.sectionSubtitle }, `${remainders.length} prenotazione${remainders.length === 1 ? '' : 'i'} con check-in precedente`)
                 ),
                 ...remainders.map((reservation, index) => {
                 const totalGuests = reservation.guestBreakdown.adults + reservation.guestBreakdown.children + reservation.guestBreakdown.infants;
@@ -868,8 +868,8 @@ async function generateReservationListPdf(date: Date, detailedReservations: Deta
               // Arrivals section
               ...(arrivals.length > 0 ? [
                 React.createElement(View, { key: 'arrivals-header', style: styles.sectionHeader },
-                  React.createElement(Text, { style: styles.sectionTitle }, '🚀 ARRIVI DI OGGI'),
-                  React.createElement(Text, { style: styles.sectionSubtitle }, `${arrivals.length} prenotazione${arrivals.length === 1 ? '' : 'i'} con check-in oggi`)
+                  React.createElement(Text, { style: styles.sectionTitle }, 'ARRIVI DI OGGI'),
+                  // React.createElement(Text, { style: styles.sectionSubtitle }, `${arrivals.length} prenotazione${arrivals.length === 1 ? '' : 'i'} con check-in oggi`)
                 ),
                 ...arrivals.map((reservation, index) => {
                 const totalGuests = reservation.guestBreakdown.adults + reservation.guestBreakdown.children + reservation.guestBreakdown.infants;
