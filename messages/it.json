@@ -193,7 +193,10 @@
     "noBedRemovalRefund": "Questa prenotazione è stata creata dall'amministratore. La rimozione dei letti non comporterà rimborsi",
     "failedToRemoveBeds": "Impossibile rimuovere i letti selezionati",
     "noBedSelected": "Seleziona almeno un letto da rimuovere",
-    "bedRemovalRefundEmailSent": "Ti abbiamo inviato una email con i dettagli del rimborso parziale"
+    "bedRemovalRefundEmailSent": "Ti abbiamo inviato una email con i dettagli del rimborso parziale",
+    "allBedsSelected": "Tutti i letti selezionati",
+    "allBedsSelectedMessage": "Hai selezionato tutti i letti disponibili. Per cancellare completamente la prenotazione, ti consigliamo di utilizzare il pulsante \"Elimina prenotazione\" che applica le politiche di rimborso complete.",
+    "useDeleteBookingButton": "Usa \"Elimina prenotazione\""
   },
   "common": {
     "cancel": "Annulla",

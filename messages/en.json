@@ -193,7 +193,10 @@
     "noBedRemovalRefund": "This booking was created by the administrator. Removing beds will not result in any refunds",
     "failedToRemoveBeds": "Failed to remove selected beds",
     "noBedSelected": "Select at least one bed to remove",
-    "bedRemovalRefundEmailSent": "We have sent you an email with partial refund details"
+    "bedRemovalRefundEmailSent": "We have sent you an email with partial refund details",
+    "allBedsSelected": "All beds selected",
+    "allBedsSelectedMessage": "You have selected all available beds. To completely cancel the booking, we recommend using the \"Delete booking\" button which applies the complete refund policies.",
+    "useDeleteBookingButton": "Use \"Delete booking\""
   },
   "common": {
     "cancel": "Cancel",

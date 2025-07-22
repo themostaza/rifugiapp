@@ -657,6 +657,16 @@ export default function ConfirmationPage() {
     });
   };
 
+  // Check if all available beds are selected
+  const getTotalAvailableBeds = () => {
+    if (!bookingData) return 0;
+    return bookingData.rooms.reduce((total, room) => total + room.guests.length, 0);
+  };
+
+  const isAllBedsSelected = () => {
+    return selectedBedsToRemove.length > 0 && selectedBedsToRemove.length === getTotalAvailableBeds();
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -1121,17 +1131,36 @@ export default function ConfirmationPage() {
           </div>
 
           {selectedBedsToRemove.length > 0 && (
-            <div className="bg-blue-50 p-2 sm:p-3 rounded-lg border border-blue-200 mt-3 sm:mt-4">
-              <h5 className="font-medium text-blue-800 mb-1 text-sm sm:text-base">
-                {translations.partialRefundAmount ? translations.partialRefundAmount.replace('{amount}', calculatePartialRefund().toFixed(2)) : `Rimborso parziale stimato: €${calculatePartialRefund().toFixed(2)}`}
-              </h5>
-              <p className="text-xs text-blue-700">
-                {bookingData?.isCreatedByAdmin 
-                  ? (translations.noBedRemovalRefund || 'Questa prenotazione è stata creata dall\'amministratore. La rimozione dei letti non comporterà rimborsi.')
-                  : 'Calcolato secondo le nostre politiche di rimborso in base alla data del check-in.'
-                }
-              </p>
-            </div>
+            <>
+              {/* Show warning if all beds are selected */}
+              {isAllBedsSelected() ? (
+                <div className="bg-orange-50 p-2 sm:p-3 rounded-lg border border-orange-200 mt-3 sm:mt-4">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h5 className="font-medium text-orange-800 mb-1 text-sm sm:text-base">
+                        {translations.allBedsSelected || 'Tutti i letti selezionati'}
+                      </h5>
+                      <p className="text-xs sm:text-sm text-orange-700">
+                        {translations.allBedsSelectedMessage || 'Hai selezionato tutti i letti disponibili. Per cancellare completamente la prenotazione, ti consigliamo di utilizzare il pulsante "Elimina prenotazione" che applica le politiche di rimborso complete.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-blue-50 p-2 sm:p-3 rounded-lg border border-blue-200 mt-3 sm:mt-4">
+                  <h5 className="font-medium text-blue-800 mb-1 text-sm sm:text-base">
+                    {translations.partialRefundAmount ? translations.partialRefundAmount.replace('{amount}', calculatePartialRefund().toFixed(2)) : `Rimborso parziale stimato: €${calculatePartialRefund().toFixed(2)}`}
+                  </h5>
+                  <p className="text-xs text-blue-700">
+                    {bookingData?.isCreatedByAdmin 
+                      ? (translations.noBedRemovalRefund || 'Questa prenotazione è stata creata dall\'amministratore. La rimozione dei letti non comporterà rimborsi.')
+                      : 'Calcolato secondo le nostre politiche di rimborso in base alla data del check-in.'
+                    }
+                  </p>
+                </div>
+              )}
+            </>
           )}
           
           <AlertDialogFooter>
@@ -1141,10 +1170,11 @@ export default function ConfirmationPage() {
             }}>
               {translations.cancel || 'Annulla'}
             </AlertDialogCancel>
+            
             <AlertDialogAction 
               onClick={handleBedRemoval}
-              disabled={selectedBedsToRemove.length === 0}
-              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-300"
+              disabled={selectedBedsToRemove.length === 0 || isAllBedsSelected()}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               {translations.confirmBedRemovalButton || 'Conferma rimozione'}
             </AlertDialogAction>

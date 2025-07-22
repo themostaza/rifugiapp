@@ -193,7 +193,10 @@
     "noBedRemovalRefund": "Cette réservation a été créée par l'administrateur. La suppression des lits n'entraînera aucun remboursement",
     "failedToRemoveBeds": "Échec de la suppression des lits sélectionnés",
     "noBedSelected": "Sélectionnez au moins un lit à supprimer",
-    "bedRemovalRefundEmailSent": "Nous vous avons envoyé un email avec les détails du remboursement partiel"
+    "bedRemovalRefundEmailSent": "Nous vous avons envoyé un email avec les détails du remboursement partiel",
+    "allBedsSelected": "Tous les lits sélectionnés",
+    "allBedsSelectedMessage": "Vous avez sélectionné tous les lits disponibles. Pour annuler complètement la réservation, nous recommandons d'utiliser le bouton \"Supprimer la réservation\" qui applique les politiques de remboursement complètes.",
+    "useDeleteBookingButton": "Utiliser \"Supprimer la réservation\""
   },
   "common": {
     "cancel": "Annuler",

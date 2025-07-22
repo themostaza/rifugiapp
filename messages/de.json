@@ -193,7 +193,10 @@
     "noBedRemovalRefund": "Diese Buchung wurde vom Administrator erstellt. Das Entfernen von Betten führt zu keiner Rückerstattung",
     "failedToRemoveBeds": "Fehler beim Entfernen der ausgewählten Betten",
     "noBedSelected": "Wählen Sie mindestens ein Bett zum Entfernen aus",
-    "bedRemovalRefundEmailSent": "Wir haben Ihnen eine E-Mail mit den Details der teilweisen Rückerstattung gesendet"
+    "bedRemovalRefundEmailSent": "Wir haben Ihnen eine E-Mail mit den Details der teilweisen Rückerstattung gesendet",
+    "allBedsSelected": "Alle Betten ausgewählt",
+    "allBedsSelectedMessage": "Sie haben alle verfügbaren Betten ausgewählt. Um die Buchung vollständig zu stornieren, empfehlen wir die Verwendung der Schaltfläche \"Buchung löschen\", die die vollständigen Erstattungsrichtlinien anwendet.",
+    "useDeleteBookingButton": "\"Buchung löschen\" verwenden"
   },
   "common": {
     "cancel": "Abbrechen",

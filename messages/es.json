@@ -193,7 +193,10 @@
     "noBedRemovalRefund": "Esta reserva fue creada por el administrador. Eliminar camas no resultará en ningún reembolso",
     "failedToRemoveBeds": "Error al eliminar las camas seleccionadas",
     "noBedSelected": "Selecciona al menos una cama para eliminar",
-    "bedRemovalRefundEmailSent": "Te hemos enviado un correo electrónico con los detalles del reembolso parcial"
+    "bedRemovalRefundEmailSent": "Te hemos enviado un correo electrónico con los detalles del reembolso parcial",
+    "allBedsSelected": "Todas las camas seleccionadas",
+    "allBedsSelectedMessage": "Has seleccionado todas las camas disponibles. Para cancelar completamente la reserva, recomendamos usar el botón \"Eliminar reserva\" que aplica las políticas de reembolso completas.",
+    "useDeleteBookingButton": "Usar \"Eliminar reserva\""
   },
   "common": {
     "cancel": "Cancelar",
