@@ -179,7 +179,21 @@
     "saveLinkTitle": "Enregistrez ce lien",
     "saveLinkMessage": "Enregistrez ce lien pour accéder à votre réservation dans le futur, même si vous avez reçu un email récapitulatif",
     "copyLink": "Copier le lien",
-    "linkCopied": "Lien copié !"
+    "linkCopied": "Lien copié !",
+    "editBooking": "Modifier la réservation",
+    "removeBeds": "Supprimer des lits",
+    "selectBedsToRemove": "Sélectionnez les lits à supprimer",
+    "selectBedsToRemoveMessage": "Sélectionnez les lits que vous souhaitez supprimer de votre réservation. Vous recevrez un remboursement partiel selon notre politique de remboursement.",
+    "confirmBedRemoval": "Confirmer la suppression des lits",
+    "confirmBedRemovalMessage": "Êtes-vous sûr de vouloir supprimer les lits sélectionnés ? Cette action ne peut pas être annulée.",
+    "confirmBedRemovalButton": "Confirmer la suppression",
+    "bedRemovalCompleted": "Suppression terminée",
+    "bedsRemovedSuccess": "Les lits sélectionnés ont été supprimés avec succès de votre réservation",
+    "partialRefundAmount": "Vous recevrez un remboursement partiel de €{amount}",
+    "noBedRemovalRefund": "Cette réservation a été créée par l'administrateur. La suppression des lits n'entraînera aucun remboursement",
+    "failedToRemoveBeds": "Échec de la suppression des lits sélectionnés",
+    "noBedSelected": "Sélectionnez au moins un lit à supprimer",
+    "bedRemovalRefundEmailSent": "Nous vous avons envoyé un email avec les détails du remboursement partiel"
   },
   "common": {
     "cancel": "Annuler",

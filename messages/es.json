@@ -179,7 +179,21 @@
     "saveLinkTitle": "Guarda este enlace",
     "saveLinkMessage": "Guarda este enlace para acceder a tu reserva en el futuro, aunque hayas recibido un correo electrónico resumen",
     "copyLink": "Copiar enlace",
-    "linkCopied": "¡Enlace copiado!"
+    "linkCopied": "¡Enlace copiado!",
+    "editBooking": "Editar reserva",
+    "removeBeds": "Eliminar camas",
+    "selectBedsToRemove": "Seleccionar camas a eliminar",
+    "selectBedsToRemoveMessage": "Selecciona las camas que deseas eliminar de tu reserva. Recibirás un reembolso parcial según nuestra política de reembolso.",
+    "confirmBedRemoval": "Confirmar eliminación de camas",
+    "confirmBedRemovalMessage": "¿Estás seguro de que quieres eliminar las camas seleccionadas? Esta acción no se puede deshacer.",
+    "confirmBedRemovalButton": "Confirmar eliminación",
+    "bedRemovalCompleted": "Eliminación Completada",
+    "bedsRemovedSuccess": "Las camas seleccionadas han sido eliminadas exitosamente de tu reserva",
+    "partialRefundAmount": "Recibirás un reembolso parcial de €{amount}",
+    "noBedRemovalRefund": "Esta reserva fue creada por el administrador. Eliminar camas no resultará en ningún reembolso",
+    "failedToRemoveBeds": "Error al eliminar las camas seleccionadas",
+    "noBedSelected": "Selecciona al menos una cama para eliminar",
+    "bedRemovalRefundEmailSent": "Te hemos enviado un correo electrónico con los detalles del reembolso parcial"
   },
   "common": {
     "cancel": "Cancelar",

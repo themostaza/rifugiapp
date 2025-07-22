@@ -179,7 +179,21 @@
     "saveLinkTitle": "Save this link",
     "saveLinkMessage": "Save this link to access your booking in the future, even though you've been sent a summary email",
     "copyLink": "Copy link",
-    "linkCopied": "Link copied!"
+    "linkCopied": "Link copied!",
+    "editBooking": "Edit booking",
+    "removeBeds": "Remove beds",
+    "selectBedsToRemove": "Select beds to remove",
+    "selectBedsToRemoveMessage": "Select the beds you want to remove from your booking. You will receive a partial refund according to our refund policy.",
+    "confirmBedRemoval": "Confirm bed removal",
+    "confirmBedRemovalMessage": "Are you sure you want to remove the selected beds? This action cannot be undone.",
+    "confirmBedRemovalButton": "Confirm removal",
+    "bedRemovalCompleted": "Removal Completed",
+    "bedsRemovedSuccess": "The selected beds have been successfully removed from your booking",
+    "partialRefundAmount": "You will receive a partial refund of €{amount}",
+    "noBedRemovalRefund": "This booking was created by the administrator. Removing beds will not result in any refunds",
+    "failedToRemoveBeds": "Failed to remove selected beds",
+    "noBedSelected": "Select at least one bed to remove",
+    "bedRemovalRefundEmailSent": "We have sent you an email with partial refund details"
   },
   "common": {
     "cancel": "Cancel",

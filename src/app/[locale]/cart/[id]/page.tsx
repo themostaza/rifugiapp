@@ -95,6 +95,12 @@ export default function ConfirmationPage() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   
+  // Bed removal states
+  const [showBedRemovalDialog, setShowBedRemovalDialog] = useState(false);
+  const [selectedBedsToRemove, setSelectedBedsToRemove] = useState<number[]>([]);
+  const [bedRemovalMessage, setBedRemovalMessage] = useState('');
+  const [showBedRemovalResultDialog, setShowBedRemovalResultDialog] = useState(false);
+  
   // Traduzioni principali
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [translations, setTranslations] = useState<Record<string, any>>({});
@@ -558,6 +564,99 @@ export default function ConfirmationPage() {
     }
   };
 
+  const handleBedRemoval = async () => {
+    if (!bookingData || selectedBedsToRemove.length === 0) {
+      setError(translations.noBedSelected || 'Seleziona almeno un letto da rimuovere');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/remove-beds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          external_id: bookingExternalId,
+          bedsToRemove: selectedBedsToRemove
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove beds');
+      }
+
+      const data = await response.json();
+      
+      // Refresh booking data after bed removal
+      const updatedResponse = await fetch(`/api/booking-details?external_id=${bookingExternalId}`);
+      const updatedData = await updatedResponse.json();
+      setBookingData(updatedData);
+
+      // Prepare bed removal message
+      let message = translations.bedsRemovedSuccess || 'I letti selezionati sono stati rimossi con successo dalla tua prenotazione.\n\n';
+      
+      if (data.refundAmount && data.refundAmount > 0) {
+        message += (translations.partialRefundAmount || 'Riceverai un rimborso parziale di €{amount}.\n').replace('{amount}', data.refundAmount.toFixed(2));
+        message += translations.bedRemovalRefundEmailSent || 'Ti abbiamo inviato una email con i dettagli del rimborso parziale.\n';
+      } else if (data.isAdminBooking) {
+        message += translations.noBedRemovalRefund || 'Questa prenotazione è stata creata dall\'amministratore. La rimozione dei letti non comporterà rimborsi.\n';
+      } else {
+        message += translations.noRefundPolicy || 'Non è previsto alcun rimborso secondo la nostra politica di cancellazione.\n';
+      }
+      
+      message += '\n' + (translations.confirmationEmailSent || 'Ti abbiamo inviato una email di conferma con tutti i dettagli.');
+      
+      setBedRemovalMessage(message);
+      setShowBedRemovalDialog(false);
+      setShowBedRemovalResultDialog(true);
+      setSelectedBedsToRemove([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (translations.failedToRemoveBeds || 'Impossibile rimuovere i letti selezionati'));
+    }
+  };
+
+  const calculatePartialRefund = () => {
+    if (!bookingData || selectedBedsToRemove.length === 0) return 0;
+    
+    let totalBedAmount = 0;
+    bookingData.rooms.forEach(room => {
+      room.guests.forEach(guest => {
+        if (selectedBedsToRemove.includes(guest.specId)) {
+          totalBedAmount += guest.price;
+        }
+      });
+    });
+
+    // Apply same refund policy as booking cancellation
+    if (bookingData.isCreatedByAdmin) return 0;
+    
+    const checkInDate = new Date(bookingData.checkIn);
+    checkInDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const timeDifference = checkInDate.getTime() - today.getTime();
+    const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+
+    let refundPercentage = 0;
+    if (daysDifference >= 7) refundPercentage = 1;
+    else if (daysDifference >= 1) refundPercentage = 0.7;
+    else refundPercentage = 0;
+
+    return totalBedAmount * refundPercentage;
+  };
+
+  const toggleBedSelection = (specId: number) => {
+    setSelectedBedsToRemove(prev => {
+      if (prev.includes(specId)) {
+        return prev.filter(id => id !== specId);
+      } else {
+        return [...prev, specId];
+      }
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -599,7 +698,7 @@ export default function ConfirmationPage() {
       />
 
       <main className="flex-grow container mx-auto sm:px-4 py-4 sm:py-8">
-        <Card className=" sm:p-6 max-w-4xl mx-auto border-green-100 shadow-md">
+        <Card className="sm:p-6 max-w-4xl mx-auto border-green-100 shadow-md">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-3 mb-4">
               <div className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full ${
@@ -909,6 +1008,17 @@ export default function ConfirmationPage() {
                     </Link>
                   </Button>
 
+                  {/* Pulsante di modifica per rimuovere letti - SOLO per prenotazioni PAGATE o ADMIN */}
+                  {isBeforeCheckIn() && (bookingData.isPaid || bookingData.isCreatedByAdmin) ? (
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-auto px-8 border-blue-300 text-blue-700 hover:bg-blue-50"
+                      onClick={() => setShowBedRemovalDialog(true)}
+                    >
+                      {translations.editBooking || 'Modifica prenotazione'}
+                    </Button>
+                  ) : null}
+
                   {/* Mostra il pulsante di cancellazione SOLO per prenotazioni PAGATE o ADMIN */}
                   {isBeforeCheckIn() && (bookingData.isPaid || bookingData.isCreatedByAdmin) ? (
                     <AlertDialog>
@@ -966,6 +1076,93 @@ export default function ConfirmationPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setShowRefundDialog(false)} className="bg-gray-900 hover:bg-gray-700">
+              {translations.understand || 'Ho capito'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bed Removal Selection Dialog */}
+      <AlertDialog open={showBedRemovalDialog} onOpenChange={setShowBedRemovalDialog}>
+        <AlertDialogContent className="w-full sm:w-[90%] sm:max-w-2xl mx-0 sm:mx-auto max-h-[80vh] overflow-y-auto p-4 sm:p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{translations.selectBedsToRemove || 'Seleziona i letti da rimuovere'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {translations.selectBedsToRemoveMessage || 'Seleziona i letti che vuoi rimuovere dalla tua prenotazione. Riceverai un rimborso parziale in base alle nostre politiche di rimborso.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="max-h-60 overflow-y-auto space-y-3 sm:space-y-4">
+            {bookingData && bookingData.rooms.map((room) => (
+              <div key={room.roomId} className="border rounded-lg p-2 sm:p-3">
+                <h4 className="font-semibold text-sm mb-2">{room.roomDescription}</h4>
+                <div className="space-y-1 sm:space-y-2">
+                  {room.guests.map((guest) => (
+                    <label key={guest.specId} className="flex items-center space-x-2 cursor-pointer p-1.5 sm:p-2 rounded hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={selectedBedsToRemove.includes(guest.specId)}
+                        onChange={() => toggleBedSelection(guest.specId)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1 flex justify-between items-center">
+                        <span className="text-xs sm:text-sm">
+                          {guest.guestType} - {guest.bedName}
+                        </span>
+                        <span className="text-xs sm:text-sm font-medium">
+                          €{guest.price.toFixed(2)}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedBedsToRemove.length > 0 && (
+            <div className="bg-blue-50 p-2 sm:p-3 rounded-lg border border-blue-200 mt-3 sm:mt-4">
+              <h5 className="font-medium text-blue-800 mb-1 text-sm sm:text-base">
+                {translations.partialRefundAmount ? translations.partialRefundAmount.replace('{amount}', calculatePartialRefund().toFixed(2)) : `Rimborso parziale stimato: €${calculatePartialRefund().toFixed(2)}`}
+              </h5>
+              <p className="text-xs text-blue-700">
+                {bookingData?.isCreatedByAdmin 
+                  ? (translations.noBedRemovalRefund || 'Questa prenotazione è stata creata dall\'amministratore. La rimozione dei letti non comporterà rimborsi.')
+                  : 'Calcolato secondo le nostre politiche di rimborso in base alla data del check-in.'
+                }
+              </p>
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setSelectedBedsToRemove([]);
+              setShowBedRemovalDialog(false);
+            }}>
+              {translations.cancel || 'Annulla'}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBedRemoval}
+              disabled={selectedBedsToRemove.length === 0}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-300"
+            >
+              {translations.confirmBedRemovalButton || 'Conferma rimozione'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bed Removal Result Dialog */}
+      <AlertDialog open={showBedRemovalResultDialog} onOpenChange={setShowBedRemovalResultDialog}>
+        <AlertDialogContent className="w-[90%] sm:w-full max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{translations.bedRemovalCompleted || 'Rimozione Completata'}</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {bedRemovalMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowBedRemovalResultDialog(false)} className="bg-gray-900 hover:bg-gray-700">
               {translations.understand || 'Ho capito'}
             </AlertDialogAction>
           </AlertDialogFooter>

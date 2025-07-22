@@ -179,7 +179,21 @@
     "saveLinkTitle": "Speichern Sie diesen Link",
     "saveLinkMessage": "Speichern Sie diesen Link, um in Zukunft auf Ihre Buchung zuzugreifen, auch wenn Sie eine Zusammenfassung per E-Mail erhalten haben",
     "copyLink": "Link kopieren",
-    "linkCopied": "Link kopiert!"
+    "linkCopied": "Link kopiert!",
+    "editBooking": "Buchung bearbeiten",
+    "removeBeds": "Betten entfernen",
+    "selectBedsToRemove": "Zu entfernende Betten auswählen",
+    "selectBedsToRemoveMessage": "Wählen Sie die Betten aus, die Sie aus Ihrer Buchung entfernen möchten. Sie erhalten eine teilweise Rückerstattung gemäß unserer Rückerstattungsrichtlinie.",
+    "confirmBedRemoval": "Betten-Entfernung bestätigen",
+    "confirmBedRemovalMessage": "Sind Sie sicher, dass Sie die ausgewählten Betten entfernen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmBedRemovalButton": "Entfernung bestätigen",
+    "bedRemovalCompleted": "Entfernung abgeschlossen",
+    "bedsRemovedSuccess": "Die ausgewählten Betten wurden erfolgreich aus Ihrer Buchung entfernt",
+    "partialRefundAmount": "Sie erhalten eine teilweise Rückerstattung von €{amount}",
+    "noBedRemovalRefund": "Diese Buchung wurde vom Administrator erstellt. Das Entfernen von Betten führt zu keiner Rückerstattung",
+    "failedToRemoveBeds": "Fehler beim Entfernen der ausgewählten Betten",
+    "noBedSelected": "Wählen Sie mindestens ein Bett zum Entfernen aus",
+    "bedRemovalRefundEmailSent": "Wir haben Ihnen eine E-Mail mit den Details der teilweisen Rückerstattung gesendet"
   },
   "common": {
     "cancel": "Abbrechen",
