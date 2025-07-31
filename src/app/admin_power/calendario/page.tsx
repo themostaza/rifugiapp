@@ -269,7 +269,9 @@ const CalendarPageContent: React.FC = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-semibold mb-4">Calendario Prenotazioni</h1>
       <BookingActions 
-        // Passa i props necessari a BookingActions
+        onActionCompleted={refreshBlockedDays}
+        currentYear={currentDate.getFullYear()}
+        currentMonth={currentDate.getMonth() + 1}
       />
 
       <div className="bg-white rounded-md shadow p-4 mb-4">

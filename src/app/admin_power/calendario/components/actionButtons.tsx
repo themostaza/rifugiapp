@@ -28,6 +28,11 @@ const BookingActions: React.FC<BookingActionsProps> = ({
   const [endDate, setEndDate] = useState('');
   const [singleDate, setSingleDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUnblockDialogOpen, setIsUnblockDialogOpen] = useState(false);
+  const [unblockStartDate, setUnblockStartDate] = useState('');
+  const [unblockEndDate, setUnblockEndDate] = useState('');
+  const [isUnblocking, setIsUnblocking] = useState(false);
+  const [unblockResult, setUnblockResult] = useState<{unblocked:number, alreadyFree:number}|null>(null);
 
   const handleMultiBlockConfirm = async () => {
     if (!startDate || !endDate) return;
@@ -105,6 +110,43 @@ const BookingActions: React.FC<BookingActionsProps> = ({
     router.push(path);
   };
 
+  // Funzione per sblocco multiplo
+  const handleMultiUnblockConfirm = async () => {
+    if (!unblockStartDate || !unblockEndDate) return;
+    setIsUnblocking(true);
+    setUnblockResult(null);
+    try {
+      const start = new Date(unblockStartDate);
+      const end = new Date(unblockEndDate);
+      if (start > end) throw new Error('La data di inizio deve essere precedente o uguale alla data di fine');
+      let unblocked = 0;
+      let alreadyFree = 0;
+      const current = new Date(start);
+      while (current <= end) {
+        try {
+          const res = await (await import('@/utils/blockDays')).unblockDay(current);
+          if (res) {
+            unblocked++;
+          } else {
+            alreadyFree++;
+          }
+        } catch {
+          alreadyFree++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      setUnblockResult({ unblocked, alreadyFree });
+      setIsUnblockDialogOpen(false);
+      setUnblockStartDate('');
+      setUnblockEndDate('');
+      if (onActionCompleted) onActionCompleted();
+    } catch (error) {
+      console.error('Errore nello sblocco multiplo:', error);
+    } finally {
+      setIsUnblocking(false);
+    }
+  };
+
   return (
     <>
       <div className="flex gap-2 mb-4 justify-between items-center">
@@ -120,6 +162,12 @@ const BookingActions: React.FC<BookingActionsProps> = ({
             onClick={() => setIsSingleBlockDialogOpen(true)}
           >
             Blocca prenotazioni
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsUnblockDialogOpen(true)}
+          >
+            Sblocco multiplo
           </Button>
           <Button 
             variant="default"
@@ -265,6 +313,65 @@ const BookingActions: React.FC<BookingActionsProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog per sblocco multiplo */}
+      <Dialog open={isUnblockDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsUnblockDialogOpen(false);
+          setUnblockStartDate('');
+          setUnblockEndDate('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sblocco multiplo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="unblockStartDate">Da:</Label>
+              <Input
+                id="unblockStartDate"
+                type="date"
+                value={unblockStartDate}
+                onChange={(e) => setUnblockStartDate(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="unblockEndDate">A:</Label>
+              <Input
+                id="unblockEndDate"
+                type="date"
+                value={unblockEndDate}
+                onChange={(e) => setUnblockEndDate(e.target.value)}
+              />
+            </div>
+            <div className="mt-4 text-sm">
+              Questa azione sbloccherà tutte le date nel range selezionato, estremi compresi. I giorni già liberi verranno ignorati.
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsUnblockDialogOpen(false)}
+                disabled={isUnblocking}
+              >
+                Annulla
+              </Button>
+              <Button
+                onClick={handleMultiUnblockConfirm}
+                disabled={isUnblocking || !unblockStartDate || !unblockEndDate}
+              >
+                {isUnblocking ? 'Sblocco...' : 'Conferma'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Messaggio riepilogativo dopo sblocco multiplo */}
+      {unblockResult && (
+        <div className="mt-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded p-2">
+          {unblockResult.unblocked > 0 && `${unblockResult.unblocked} giorni sbloccati con successo.`} {unblockResult.alreadyFree > 0 && `${unblockResult.alreadyFree} giorni erano già liberi.`}
+        </div>
+      )}
     </>
   );
 };
