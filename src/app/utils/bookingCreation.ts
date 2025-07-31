@@ -84,6 +84,9 @@ export async function createBooking(
   supabase: SupabaseClient,
   data: BookingData
 ) {
+  if (!data.totalAmount || data.totalAmount <= 0) {
+    throw new Error('Non è possibile creare una prenotazione con importo zero.');
+  }
 
   
   console.log(`Creating ${data.isAdmin ? 'admin' : 'regular'} basket with data:`, {
