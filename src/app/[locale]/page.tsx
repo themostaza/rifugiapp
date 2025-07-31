@@ -893,6 +893,16 @@ export default function BookingPage() {
             </div>
           </Card>
 
+          {!showResults && !isSearching && (
+            <div className="max-w-4xl mx-auto px-2 sm:px-4 py-3">
+              <div
+                className="p-3 sm:p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-400 text-sm sm:text-base"
+                dangerouslySetInnerHTML={{ __html: t('booking.instructions') }}
+                style={{ lineHeight: '1.6' }}
+              />
+            </div>
+          )}
+
           {searchError && (
             <div className="max-w-4xl mx-auto px-2 sm:px-4">
               {searchError === 'blocked_days' && (

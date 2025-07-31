@@ -50,7 +50,8 @@
     "step2": "2. Seleziona una stanza.",
     "selectTreatment": "Seleziona trattamento",
     "infoProceed": "Se questa soluzione funziona per te, clicca sul pulsante 'Prosegui l'acquisto'.",
-    "infoContact": "Hai domande? Puoi contattare il gestore al numero +39 0436 860294 / +39 333 143 4408 oppure inviando una mail a rifugiodibona@gmail.com."
+    "infoContact": "Hai domande? Puoi contattare il gestore al numero +39 0436 860294 / +39 333 143 4408 oppure inviando una mail a rifugiodibona@gmail.com.",
+    "instructions": "Rifugio Dibona informa:<br/>Per completare la prenotazione, assicurati di seguire i 6 passaggi segnalati dai rispettivi numeri.<br/>Se hai dubbi: visita la pagina di <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&A</a>"
   },
   "room": {
     "bedMapTitle": "Mappa dei letti",

@@ -50,7 +50,8 @@
     "step2": "2. Select a room.",
     "selectTreatment": "Select treatment",
     "infoProceed": "If this solution works for you, click the 'Proceed to checkout' button.",
-    "infoContact": "Questions? You can contact the manager at +39 0436 860294 / +39 333 143 4408 or by sending an email to rifugiodibona@gmail.com."
+    "infoContact": "Questions? You can contact the manager at +39 0436 860294 / +39 333 143 4408 or by sending an email to rifugiodibona@gmail.com.",
+    "instructions": "Rifugio Dibona notice:<br/>To complete your booking, please follow the 6 steps indicated by the respective numbers.<br/>If you have any questions: visit the <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A page</a>"
   },
   "room": {
     "bedMapTitle": "Bed Map",
