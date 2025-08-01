@@ -346,6 +346,7 @@ export default function BookingPage() {
   const [allBlockedBeds, setAllBlockedBeds] = useState<{ [roomId: number]: { [date: string]: number[] } }>({});
   const [currentBookingId, setCurrentBookingId] = useState<number | null>(null);
   const serviceWorkerRef = useRef<ServiceWorker | null>(null);
+  const searchDatesRef = useRef<{ checkIn?: Date, checkOut?: Date }>({});
   const [isSearching, setIsSearching] = useState(false);
   const [isAdminBooking, setIsAdminBooking] = useState(false);
 
@@ -404,6 +405,57 @@ export default function BookingPage() {
     }));
     // console.log("Updated allBlockedBeds:", { ...allBlockedBeds, [roomId]: blockedBedsData });
   }, []);
+
+  // Funzione per resettare lo stato della ricerca
+  const resetSearchState = useCallback(async () => {
+    console.log('Resetting search state due to date change...');
+
+    if (intervalIdRef.current) {
+      clearInterval(intervalIdRef.current);
+      intervalIdRef.current = null;
+    }
+
+    if (currentBookingId) {
+      await fetch('/api/booking-hold', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          bookingId: currentBookingId, 
+          action: 'CANCEL' 
+        })
+      });
+    }
+
+    setShowResults(false);
+    setRooms([]);
+    setAssignedGuests([]);
+    setRoomPrivacyCosts({});
+    setAllBlockedBeds({});
+    setAvailabilityByNight(undefined);
+    setCountdown(null);
+    setCurrentBookingId(null);
+    setSearchError(null);
+    searchDatesRef.current = {};
+  }, [currentBookingId]);
+
+
+
+  useEffect(() => {
+    // Se i risultati sono visualizzati e le date cambiano, resetta la ricerca
+    if (showResults) {
+      const lastSearchCheckIn = searchDatesRef.current.checkIn?.getTime();
+      const lastSearchCheckOut = searchDatesRef.current.checkOut?.getTime();
+      const currentCheckIn = checkIn?.getTime();
+      const currentCheckOut = checkOut?.getTime();
+
+      if (
+        lastSearchCheckIn !== currentCheckIn ||
+        lastSearchCheckOut !== currentCheckOut
+      ) {
+        resetSearchState();
+      }
+    }
+  }, [checkIn, checkOut, showResults, resetSearchState]);
 
   // Check for admin_booking parameter on component mount
   useEffect(() => {
@@ -573,6 +625,7 @@ export default function BookingPage() {
         }
 
         setCurrentBookingId(bookingHoldData.bookingId);
+        searchDatesRef.current = { checkIn, checkOut }; // Salva le date della ricerca
         setRooms(data.rooms);
         setAvailabilityByNight(data.availabilityByNight)
         setShowResults(true);
