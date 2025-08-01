@@ -996,34 +996,42 @@ export default function BookingPage() {
             <>
               {/* Primo Card - Selezione tipo pensione */}
               <Card className="mt-4 sm:mt-0 sm:p-6 max-w-4xl mx-auto border-0 shadow-none sm:border sm:shadow">
-                <div>
-                  <p className="mb-3 text-gray-700 text-sm sm:text-base">
-                    <span dangerouslySetInnerHTML={{__html: t('booking.step1')}}></span><br/>
-                    <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_hb')}}></span><br/>
-                    <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_bb')}}></span>
-                  </p>
-                  <Select 
-                    value={pensionType} 
-                    onValueChange={(value: string) => {
-                      if (value === 'bb' || value === 'hb') {
-                        setPensionType(value as 'bb' | 'hb');
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full sm:w-auto">
-                      <SelectValue placeholder={t('booking.selectTreatment')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bb">Bed & Breakfast</SelectItem>
-                      <SelectItem value="hb">{language === 'it' ? 'Mezza Pensione' : language === 'en' ? 'Half Board' : language === 'fr' ? 'Demi-pension' : language === 'de' ? 'Halbpension' : language === 'es' ? 'Media pensión' : 'Mezza Pensione'}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 bg-gray-900 text-white rounded-full font-bold text-lg">1</div>
+                  <div className="flex-grow">
+                    <p className="mb-3 text-gray-700 text-sm sm:text-base">
+                      <span dangerouslySetInnerHTML={{__html: t('booking.step1')}}></span><br/>
+                      <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_hb')}}></span><br/>
+                      <span className="" dangerouslySetInnerHTML={{__html: t('booking.step1_bb')}}></span>
+                    </p>
+                    <Select 
+                      value={pensionType} 
+                      onValueChange={(value: string) => {
+                        if (value === 'bb' || value === 'hb') {
+                          setPensionType(value as 'bb' | 'hb');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full sm:w-auto">
+                        <SelectValue placeholder={t('booking.selectTreatment')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bb">Bed & Breakfast</SelectItem>
+                        <SelectItem value="hb">{language === 'it' ? 'Mezza Pensione' : language === 'en' ? 'Half Board' : language === 'fr' ? 'Demi-pension' : language === 'de' ? 'Halbpension' : language === 'es' ? 'Media pensión' : 'Mezza Pensione'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </Card>
 
               {/* Secondo Card - Lista stanze */}
               <Card className="sm:p-6 max-w-4xl mx-auto border-0 shadow-none sm:border sm:shadow">
-                <span className="text-sm sm:text-base mb-4 block">{t('booking.step2')}</span>
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 bg-gray-900 text-white rounded-full font-bold text-lg">2</div>
+                  <div className="pt-1">
+                    <span className="text-sm sm:text-base block font-semibold">{t('booking.step2')}</span>
+                  </div>
+                </div>
                 <RoomList 
                   rooms={rooms}
                   onSelect={handleRoomSelect}

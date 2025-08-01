@@ -164,7 +164,10 @@ const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
 
   return (
     <section>
-      <h2 className="text-xl font-semibold mb-4">{t('contactInfo.title')}</h2>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 bg-gray-900 text-white rounded-full font-bold text-lg">5</div>
+        <h2 className="text-xl font-semibold">{t('contactInfo.title')}</h2>
+      </div>
       <p className="text-gray-600 mb-4">
         {t('contactInfo.description')}
       </p>

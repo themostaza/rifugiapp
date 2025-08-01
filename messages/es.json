@@ -44,14 +44,14 @@
     },
     "guestSingular": "huésped",
     "guestPlural": "huéspedes",
-    "step1": "1. Selecciona el tipo de alojamiento:",
+    "step1": "Selecciona el tipo de alojamiento:",
     "step1_bb": "• <strong>Alojamiento y desayuno</strong>: incluye solo el desayuno",
     "step1_hb": "• <strong>Media pensión</strong>: incluye cena y desayuno",
-    "step2": "2. Selecciona una habitación.",
+    "step2": "Selecciona una habitación.",
     "selectTreatment": "Seleccionar tratamiento",
     "infoProceed": "Si esta solución es adecuada para ti, haz clic en el botón 'Proceder a la compra'.",
     "infoContact": "¿Preguntas? Puedes contactar con el gerente en el +39 0436 860294 / +39 333 143 4408 o enviando un correo a rifugiodibona@gmail.com.",
-    "instructions": "Rifugio Dibona informa:<br/>Para completar la reserva, asegúrate de seguir los 6 pasos indicados por los respectivos números.<br/>Si tienes dudas: visita la página de <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A</a>"
+    "instructions": "Rifugio Dibona informa:<br/>Para completar la reserva, asegúrate de seguir los 5 pasos indicados por los respectivos números.<br/>Si tienes dudas: visita la página de <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A</a>"
   },
   "room": {
     "bedMapTitle": "Mapa de camas",
@@ -77,7 +77,7 @@
     "adminBookingError": "Se produjo un error al crear la reserva",
     "tryAgainLater": "Por favor, inténtalo de nuevo más tarde.",
     "backToRooms": "Volver a las habitaciones",
-    "additionalServicesTitle": "4. Servicios adicionales",
+    "additionalServicesTitle": "Servicios adicionales (opcional)",
     "additionalServicesDescription": "Si deseas agregar otros servicios, marca la casilla correspondiente y, si es necesario, ingresa la cantidad deseada.",
     "loadingServices": "Cargando servicios...",
     "noServicesAvailable": "No hay servicios adicionales disponibles",
@@ -107,7 +107,7 @@
     "openPaymentPage": "Abrir página de pago"
   },
   "contactInfo": {
-    "title": "6. Persona de contacto de la reserva",
+    "title": "Persona de contacto de la reserva",
     "description": "Ingresa la información de contacto de la persona de contacto de la reserva.",
     "nameLabel": "Nombre y apellido",
     "namePlaceholder": "Nombre y apellido",
@@ -126,7 +126,7 @@
     "errorLoadingRegions": "Error al cargar regiones"
   },
   "notes": {
-    "title": "5. Notas",
+    "title": "Notas (opcional)",
     "description": "Agrega cualquier nota (alergias, intolerancias, solicitudes especiales, etc.).",
     "placeholder": "Ingresa tus notas aquí..."
   },

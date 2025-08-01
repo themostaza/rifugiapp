@@ -44,14 +44,14 @@
     },
     "guestSingular": "guest",
     "guestPlural": "guests",
-    "step1": "1. Select the type of accommodation:",
+    "step1": "Select the type of accommodation:",
     "step1_bb": "• <strong>Bed & Breakfast</strong>: includes breakfast only",
     "step1_hb": "• <strong>Half Board</strong>: includes dinner and breakfast",
-    "step2": "2. Select a room.",
+    "step2": "Select a room.",
     "selectTreatment": "Select treatment",
     "infoProceed": "If this solution works for you, click the 'Proceed to checkout' button.",
     "infoContact": "Questions? You can contact the manager at +39 0436 860294 / +39 333 143 4408 or by sending an email to rifugiodibona@gmail.com.",
-    "instructions": "Rifugio Dibona notice:<br/>To complete your booking, please follow the 6 steps indicated by the respective numbers.<br/>If you have any questions: visit the <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A page</a>"
+    "instructions": "Rifugio Dibona notice:<br/>To complete your booking, please follow the 5 steps indicated by the respective numbers.<br/>If you have any questions: visit the <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A page</a>"
   },
   "room": {
     "bedMapTitle": "Bed Map",
@@ -77,7 +77,7 @@
     "adminBookingError": "An error occurred while creating the booking",
     "tryAgainLater": "Please try again later.",
     "backToRooms": "Back to rooms",
-    "additionalServicesTitle": "4. Additional Services",
+    "additionalServicesTitle": "Additional Services (optional)",
     "additionalServicesDescription": "If you wish to add other services, check the respective box and, if required, enter the desired quantity.",
     "loadingServices": "Loading services...",
     "noServicesAvailable": "No additional services available",
@@ -107,7 +107,7 @@
     "openPaymentPage": "Open payment page"
   },
   "contactInfo": {
-    "title": "6. Booking Contact Person",
+    "title": "Booking Contact Person",
     "description": "Enter the contact information for the booking contact person.",
     "nameLabel": "Full name",
     "namePlaceholder": "Full name",
@@ -126,7 +126,7 @@
     "errorLoadingRegions": "Error loading regions"
   },
   "notes": {
-    "title": "5. Notes",
+    "title": "Notes (optional)",
     "description": "Add any notes (allergies, intolerances, special requests, etc.).",
     "placeholder": "Enter your notes here..."
   },

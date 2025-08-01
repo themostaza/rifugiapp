@@ -44,14 +44,14 @@
     },
     "guestSingular": "visiteur",
     "guestPlural": "visiteurs",
-    "step1": "1. Sélectionnez le type d'hébergement :",
+    "step1": "Sélectionnez le type d'hébergement :",
     "step1_bb": "• <strong>Nuit et Petit-déjeuner</strong> : inclut seulement le petit-déjeuner",
     "step1_hb": "• <strong>Demi-pension</strong> : inclut le dîner et le petit-déjeuner",
-    "step2": "2. Sélectionnez une chambre.",
+    "step2": "Sélectionnez une chambre.",
     "selectTreatment": "Sélectionner le traitement",
     "infoProceed": "Si cette solution vous convient, cliquez sur le bouton 'Procéder à l'achat'.",
     "infoContact": "Des questions ? Vous pouvez contacter le gérant au +39 0436 860294 / +39 333 143 4408 ou envoyer un email à rifugiodibona@gmail.com.",
-    "instructions": "Rifugio Dibona informe :<br/>Pour finaliser votre réservation, assurez-vous de suivre les 6 étapes indiquées par les numéros respectifs.<br/>En cas de doute : visitez la page <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A</a>"
+    "instructions": "Rifugio Dibona informe :<br/>Pour finaliser votre réservation, assurez-vous de suivre les 5 étapes indiquées par les numéros respectifs.<br/>En cas de doute : visitez la page <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A</a>"
   },
   "room": {
     "bedMapTitle": "Carte des lits",
@@ -77,7 +77,7 @@
     "adminBookingError": "Une erreur s'est produite lors de la création de la réservation",
     "tryAgainLater": "Veuillez réessayer plus tard.",
     "backToRooms": "Retour aux chambres",
-    "additionalServicesTitle": "4. Services supplémentaires",
+    "additionalServicesTitle": "Services supplémentaires (optionnel)",
     "additionalServicesDescription": "Si vous souhaitez ajouter d'autres services, cochez la case correspondante et, si nécessaire, saisissez la quantité souhaitée.",
     "loadingServices": "Chargement des services...",
     "noServicesAvailable": "Aucun service supplémentaire disponible",
@@ -107,7 +107,7 @@
     "openPaymentPage": "Ouvrir la page de paiement"
   },
   "contactInfo": {
-    "title": "6. Personne de contact de la réservation",
+    "title": "Personne de contact de la réservation",
     "description": "Saisissez les informations de contact de la personne de contact de la réservation.",
     "nameLabel": "Nom et prénom",
     "namePlaceholder": "Nom et prénom",
@@ -126,7 +126,7 @@
     "errorLoadingRegions": "Erreur de chargement des régions"
   },
   "notes": {
-    "title": "5. Notes",
+    "title": "Notes (optionnel)",
     "description": "Ajoutez des notes (allergies, intolérances, demandes spéciales, etc.).",
     "placeholder": "Saisissez vos notes ici..."
   },

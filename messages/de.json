@@ -44,14 +44,14 @@
     },
     "guestSingular": "Gast",
     "guestPlural": "Gäste",
-    "step1": "1. Wählen Sie die Art der Unterkunft:",
+    "step1": "Wählen Sie die Art der Unterkunft:",
     "step1_bb": "• <strong>Übernachtung mit Frühstück</strong>: beinhaltet nur Frühstück",
     "step1_hb": "• <strong>Halbpension</strong>: beinhaltet Abendessen und Frühstück",
-    "step2": "2. Wählen Sie ein Zimmer.",
+    "step2": "Wählen Sie ein Zimmer.",
     "selectTreatment": "Behandlung auswählen",
     "infoProceed": "Wenn diese Lösung für Sie passt, klicken Sie auf die Schaltfläche 'Zum Checkout fortfahren'.",
     "infoContact": "Fragen? Sie können den Manager unter +39 0436 860294 / +39 333 143 4408 kontaktieren oder eine E-Mail an rifugiodibona@gmail.com senden.",
-    "instructions": "Rifugio Dibona informiert:<br/>Um die Buchung abzuschließen, folgen Sie bitte den 6 Schritten, die durch die jeweiligen Nummern angezeigt werden.<br/>Bei Fragen besuchen Sie die <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A-Seite</a>"
+    "instructions": "Rifugio Dibona informiert:<br/>Um die Buchung abzuschließen, folgen Sie bitte den 5 Schritten, die durch die jeweiligen Nummern angezeigt werden.<br/>Bei Fragen besuchen Sie die <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A-Seite</a>"
   },
   "room": {
     "bedMapTitle": "Bettenkarte",
@@ -77,7 +77,7 @@
     "adminBookingError": "Ein Fehler ist bei der Erstellung der Buchung aufgetreten",
     "tryAgainLater": "Bitte versuchen Sie es später erneut.",
     "backToRooms": "Zurück zu den Zimmern",
-    "additionalServicesTitle": "4. Zusätzliche Leistungen",
+    "additionalServicesTitle": "Zusätzliche Leistungen (optional)",
     "additionalServicesDescription": "Wenn Sie weitere Leistungen hinzufügen möchten, markieren Sie das entsprechende Kästchen und geben Sie, falls erforderlich, die gewünschte Menge ein.",
     "loadingServices": "Lade Leistungen...",
     "noServicesAvailable": "Keine zusätzlichen Leistungen verfügbar",
@@ -107,7 +107,7 @@
     "openPaymentPage": "Zahlungsseite öffnen"
   },
   "contactInfo": {
-    "title": "6. Buchungsansprechpartner",
+    "title": "Buchungsansprechpartner",
     "description": "Geben Sie die Kontaktinformationen für den Buchungsansprechpartner ein.",
     "nameLabel": "Vor- und Nachname",
     "namePlaceholder": "Vor- und Nachname",
@@ -126,7 +126,7 @@
     "errorLoadingRegions": "Fehler beim Laden der Regionen"
   },
   "notes": {
-    "title": "5. Notizen",
+    "title": "Notizen (optional)",
     "description": "Fügen Sie Notizen hinzu (Allergien, Unverträglichkeiten, besondere Wünsche, etc.).",
     "placeholder": "Geben Sie hier Ihre Notizen ein..."
   },
