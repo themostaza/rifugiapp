@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import Stripe from 'stripe';
+import { createNexiRefund } from '@/lib/payment/nexi-client';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia'
@@ -20,6 +21,12 @@ interface BookingContextData {
   isCreatedByAdmin?: boolean;
   dayFrom?: string; // Added for refund logic context
   totalPrice?: number; // Added for refund logic context
+  isCancelled?: boolean;
+  // Nexi fields
+  nexiOperationId?: string | null;
+  nexiOrderId?: string | null;
+  nexiSecurityToken?: string | null;
+  nexiPaymentCircuit?: string | null;
   // Allow other properties for flexibility in logging diverse states
   [key: string]: unknown; // Changed from any to unknown
 }
@@ -298,12 +305,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, isAdminBooking: true, message: 'Prenotazione creata dall\'amministratore è stata cancellata.'});
     }
 
-    if (!booking.isPaid || !booking.paymentIntentId) {
+    // Check: la prenotazione deve essere pagata e avere info di pagamento (Stripe O Nexi)
+    const hasPaymentInfo = booking.paymentIntentId || booking.nexiOperationId;
+    if (!booking.isPaid || !hasPaymentInfo) {
        await sendAdminErrorEmail(
-        "Tentativo cancellazione prenotazione non pagata o senza PaymentIntentID",
-        "N/A - Booking not paid/no PIID",
+        "Tentativo cancellazione prenotazione non pagata o senza info pagamento",
+        "N/A - Booking not paid/no payment info",
         booking,
-        { message: "Booking not paid or missing PaymentIntentID", name: "PaymentValidationError", isPaid: booking.isPaid, paymentIntentId: booking.paymentIntentId }
+        { message: "Booking not paid or missing payment information", name: "PaymentValidationError", isPaid: booking.isPaid, paymentIntentId: booking.paymentIntentId, nexiOperationId: booking.nexiOperationId }
       );
       return NextResponse.json(
         { error: 'Booking is not paid or missing payment information for refund processing' },
@@ -324,7 +333,43 @@ export async function POST(request: Request) {
     else if (daysDifference >= 1) refundPercentage = 0.7;
     else refundPercentage = 0;
 
-    if (refundPercentage > 0 && booking.paymentIntentId) {
+    // ========================================================================
+    // NEXI REFUND FLOW
+    // ========================================================================
+    if (refundPercentage > 0 && booking.nexiOperationId) {
+      try {
+        refundAmount = booking.totalPrice! * refundPercentage;
+        await createNexiRefund({
+          operationId: booking.nexiOperationId,
+          amount: refundAmount,
+          description: 'Refund - Cancellazione prenotazione'
+        });
+        console.log(`Nexi refund processed: ${refundAmount}€ for booking ${booking.external_id}`);
+      } catch (refundError: unknown) {
+        console.error('Error processing Nexi refund:', refundError);
+        const errDetails: ErrorLogDetails = { message: "Failed to process Nexi refund" };
+        if (refundError instanceof Error) { 
+            errDetails.message = refundError.message; 
+            errDetails.name = refundError.name; 
+            errDetails.stack = refundError.stack; 
+        } else if (typeof refundError === 'object' && refundError !== null && 'message' in refundError) {
+            errDetails.message = String((refundError as {message: string}).message);
+        }
+        if (!(refundError instanceof Error)) errDetails.nexiError = refundError;
+
+        await sendAdminErrorEmail(
+          "Fallimento elaborazione rimborso Nexi",
+          "N/A - Nexi refund error",
+          booking,
+          errDetails
+        );
+        return NextResponse.json({ error: 'Failed to process refund via Nexi. Please contact support.' }, { status: 500 });
+      }
+    }
+    // ========================================================================
+    // STRIPE REFUND FLOW (codice originale INVARIATO)
+    // ========================================================================
+    else if (refundPercentage > 0 && booking.paymentIntentId) {
       try {
         refundAmount = booking.totalPrice! * refundPercentage; // Added non-null assertion
         await stripe.refunds.create({ payment_intent: booking.paymentIntentId, amount: Math.round(refundAmount * 100), reason: 'requested_by_customer' as const });

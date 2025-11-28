@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/sidebar'
+import MaintenanceGate from '@/app/components/MaintenanceGate'
 
 export default function RootLayoutClient({
   children,
@@ -29,13 +30,11 @@ export default function RootLayoutClient({
     pathname === page || 
     (page !== '/' && page.endsWith('/') && pathname.startsWith(page))
   ) || pathname.includes('/cart/') || /^\/[a-z]{2}$/.test(pathname) // Exclude locale home pages like /en, /it
-  // Se la pagina è nella lista delle escluse, mostra solo il contenuto
-  if (shouldHideMenu) {
-    return children
-  }
 
-
-  return (
+  // Contenuto principale (con o senza sidebar)
+  const mainContent = shouldHideMenu ? (
+    children
+  ) : (
     <div className="flex min-h-screen">
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <main className={`${isCollapsed ? 'ml-16' : 'ml-64'} transition-all duration-300 flex-1`}>
@@ -43,4 +42,7 @@ export default function RootLayoutClient({
       </main>
     </div>
   )
+
+  // Wrap tutto con MaintenanceGate
+  return <MaintenanceGate>{mainContent}</MaintenanceGate>
 }

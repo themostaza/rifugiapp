@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import Stripe from 'stripe';
 import { createBooking } from '@/app/utils/bookingCreation';
+import { PAYMENT_PROVIDER } from '@/lib/payment/config';
+import { createNexiOrder } from '@/lib/payment/nexi-client';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia'
@@ -22,6 +24,52 @@ export async function POST(request: Request) {
     // Utilizzo la funzione condivisa per creare la prenotazione
     const basket = await createBooking(supabase, bookingData);
 
+    // ========================================================================
+    // NEXI PAYMENT FLOW
+    // ========================================================================
+    if (PAYMENT_PROVIDER === 'nexi') {
+      console.log('Creating Nexi order for basket:', basket.id);
+      
+      const nexiResult = await createNexiOrder({
+        orderId: basket.external_id,
+        amount: body.totalAmount,
+        description: `Check-in: ${new Date(body.checkIn).toLocaleDateString('it-IT')} Check-out: ${new Date(body.checkOut).toLocaleDateString('it-IT')}`,
+        customerEmail: body.customerEmail,
+        successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/cart/${basket.external_id}?payment_status=success`,
+        cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/?step=checkout`,
+        webhookUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/nexi`,
+        language: 'it',
+        expiresInMinutes: 30,
+      });
+
+      console.log('Nexi order created, hostedPage URL obtained');
+
+      // Update basket con info Nexi
+      const { error: updateError } = await supabase
+        .from('Basket')
+        .update({
+          nexiOrderId: basket.external_id,
+          nexiSecurityToken: nexiResult.securityToken,
+        })
+        .eq('id', basket.id);
+
+      if (updateError) {
+        console.error('Error updating basket with Nexi info:', updateError);
+        throw updateError;
+      }
+      console.log('Basket updated with Nexi information');
+
+      return NextResponse.json({ 
+        success: true, 
+        provider: 'nexi',
+        redirectUrl: nexiResult.hostedPageUrl, // URL diretto per redirect
+        basketId: basket.id
+      });
+    }
+
+    // ========================================================================
+    // STRIPE PAYMENT FLOW (codice originale INVARIATO)
+    // ========================================================================
     console.log('Creating Stripe checkout session for basket:', basket.id);
     
     // Create Stripe checkout session
@@ -70,6 +118,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
+      provider: 'stripe',
       sessionId: session.id,
       basketId: basket.id // Restituisci basket.id se serve al frontend
     });

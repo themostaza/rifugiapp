@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import Stripe from 'stripe';
+import { createNexiRefund } from '@/lib/payment/nexi-client';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia'
@@ -45,6 +46,12 @@ interface BookingContextData {
   isCreatedByAdmin?: boolean;
   dayFrom?: string;
   totalPrice?: number;
+  isCancelled?: boolean;
+  // Nexi fields
+  nexiOperationId?: string | null;
+  nexiOrderId?: string | null;
+  nexiSecurityToken?: string | null;
+  nexiPaymentCircuit?: string | null;
   [key: string]: unknown;
 }
 
@@ -364,16 +371,19 @@ export async function POST(request: Request) {
       refundPercentage = 0;
     } else {
       // Regular bookings: apply same refund logic as cancellation
-      if (!booking.isPaid || !booking.paymentIntentId) {
+      // Check: deve avere info pagamento (Stripe O Nexi)
+      const hasPaymentInfo = booking.paymentIntentId || booking.nexiOperationId;
+      if (!booking.isPaid || !hasPaymentInfo) {
         await sendAdminErrorEmail(
-          "Tentativo rimozione letti da prenotazione non pagata o senza PaymentIntentID",
-          "N/A - Booking not paid/no PIID",
+          "Tentativo rimozione letti da prenotazione non pagata o senza info pagamento",
+          "N/A - Booking not paid/no payment info",
           booking,
           { 
-            message: "Booking not paid or missing PaymentIntentID", 
+            message: "Booking not paid or missing payment information", 
             name: "PaymentValidationError", 
             isPaid: booking.isPaid, 
-            paymentIntentId: booking.paymentIntentId 
+            paymentIntentId: booking.paymentIntentId,
+            nexiOperationId: booking.nexiOperationId
           }
         );
         return NextResponse.json(
@@ -394,8 +404,45 @@ export async function POST(request: Request) {
       else if (daysDifference >= 1) refundPercentage = 0.7;
       else refundPercentage = 0;
 
-      // Process partial refund via Stripe if applicable
-      if (refundPercentage > 0 && booking.paymentIntentId) {
+      // ======================================================================
+      // NEXI PARTIAL REFUND FLOW
+      // ======================================================================
+      if (refundPercentage > 0 && booking.nexiOperationId) {
+        try {
+          refundAmount = totalBedAmount * refundPercentage;
+          await createNexiRefund({
+            operationId: booking.nexiOperationId,
+            amount: refundAmount,
+            description: 'Partial refund - Rimozione letti'
+          });
+          console.log(`Nexi partial refund processed: ${refundAmount}€ for booking ${booking.external_id}`);
+        } catch (refundError: unknown) {
+          console.error('Error processing Nexi partial refund:', refundError);
+          const errDetails: ErrorLogDetails = { message: "Failed to process Nexi partial refund" };
+          if (refundError instanceof Error) { 
+            errDetails.message = refundError.message; 
+            errDetails.name = refundError.name; 
+            errDetails.stack = refundError.stack; 
+          } else if (typeof refundError === 'object' && refundError !== null && 'message' in refundError) {
+            errDetails.message = String((refundError as {message: string}).message);
+          }
+          if (!(refundError instanceof Error)) errDetails.nexiError = refundError;
+
+          await sendAdminErrorEmail(
+            "Fallimento elaborazione rimborso parziale Nexi",
+            "N/A - Nexi partial refund error",
+            booking,
+            errDetails
+          );
+          return NextResponse.json({ 
+            error: 'Failed to process partial refund via Nexi. Please contact support.' 
+          }, { status: 500 });
+        }
+      }
+      // ======================================================================
+      // STRIPE PARTIAL REFUND FLOW (codice originale INVARIATO)
+      // ======================================================================
+      else if (refundPercentage > 0 && booking.paymentIntentId) {
         try {
           refundAmount = totalBedAmount * refundPercentage;
           await stripe.refunds.create({ 

@@ -261,7 +261,21 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
         throw new Error(errorMessage);
       }
 
-      const { sessionId } = await response.json();
+      const data = await response.json();
+
+      // ====================================================================
+      // NEXI: redirect diretto alla hosted page
+      // ====================================================================
+      if (data.provider === 'nexi' && data.redirectUrl) {
+        console.log('Redirecting to Nexi hosted payment page');
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
+      // ====================================================================
+      // STRIPE: usa loadStripe e redirectToCheckout (codice originale)
+      // ====================================================================
+      const { sessionId } = data;
 
       const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
       if (!stripe) {

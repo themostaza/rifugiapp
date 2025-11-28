@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase'; // Import Supabase client
-
-// TODO: Import your PostgreSQL client (e.g., pg, supabase-js, prisma) <- This can be removed
-// import { Pool } from 'pg'; 
-// Example for node-postgres:
-// const pool = new Pool({
-//   connectionString: process.env.POSTGRES_URL, 
-//   // Add other configurations like SSL if needed
-// });
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 interface LogEmailRequestBody {
   subject?: string | null;
@@ -20,9 +12,35 @@ interface LogEmailRequestBody {
   error_name?: string | null; // To log any error names/types
 }
 
+// Initialize Supabase client for server-side logging (no auth required)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use service role to bypass RLS
+
+let supabase: SupabaseClient | null = null;
+if (supabaseUrl && supabaseServiceKey) {
+  supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+} else {
+  console.error("[log-email-attempt] Errore: Variabili d'ambiente Supabase non definite (NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY).");
+}
+
 export async function POST(request: NextRequest) {
   console.log('[log-email-attempt] Received POST request');
+  
+  if (!supabase) {
+    console.error('[log-email-attempt] Supabase client non inizializzato');
+    return NextResponse.json(
+      { error: 'Supabase client not initialized' },
+      { status: 500 }
+    );
+  }
+  
   try {
+
     const body = await request.json() as LogEmailRequestBody;
     console.log('[log-email-attempt] Parsed request body:', body);
 
