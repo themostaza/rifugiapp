@@ -8,7 +8,7 @@ import Header from '@/components/header/header'
 import Footer from '@/components/footer/footer'
 import { Separator } from '@/components/ui/separator'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,6 +81,7 @@ interface BookingData {
 
 export default function ConfirmationPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = (params.locale as string) || 'it';
   const bookingExternalId = params.id as string;
   
@@ -94,6 +95,7 @@ export default function ConfirmationPage() {
   const [newName, setNewName] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [nexiConfirmationProcessed, setNexiConfirmationProcessed] = useState(false);
   
   // Bed removal states
   const [showBedRemovalDialog, setShowBedRemovalDialog] = useState(false);
@@ -147,6 +149,65 @@ export default function ConfirmationPage() {
     loadTranslations();
   }, [language]);
 
+  // Effect per confermare il pagamento Nexi dal redirect
+  useEffect(() => {
+    const confirmNexiPayment = async () => {
+      // Controlla se ci sono parametri Nexi nel redirect
+      const esito = searchParams.get('esito') || (searchParams.get('codiceEsito') === '0' ? 'OK' : null);
+      const codiceEsito = searchParams.get('codiceEsito');
+      const paymentStatus = searchParams.get('payment_status');
+      
+      // Se non ci sono parametri Nexi o già processato, skip
+      if (nexiConfirmationProcessed) return;
+      if (!esito && !codiceEsito && paymentStatus !== 'success') return;
+      
+      // Verifica se è un esito Nexi positivo
+      const isNexiSuccess = esito === 'OK' || codiceEsito === '0';
+      if (!isNexiSuccess) return;
+
+      console.log('[Cart] Detected Nexi redirect params, confirming payment...');
+      setNexiConfirmationProcessed(true);
+
+      try {
+        const nexiParams = {
+          external_id: bookingExternalId,
+          esito: searchParams.get('esito') || 'OK',
+          codiceEsito: searchParams.get('codiceEsito'),
+          codAut: searchParams.get('codAut'),
+          importo: searchParams.get('importo'),
+          divisa: searchParams.get('divisa'),
+          data: searchParams.get('data'),
+          orario: searchParams.get('orario'),
+          mac: searchParams.get('mac'),
+          pan: searchParams.get('pan'),
+          brand: searchParams.get('brand'),
+          mail: searchParams.get('mail'),
+          nome: searchParams.get('nome'),
+          cognome: searchParams.get('cognome'),
+        };
+
+        const response = await fetch('/api/confirm-nexi-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(nexiParams),
+        });
+
+        const result = await response.json();
+        console.log('[Cart] Nexi payment confirmation result:', result);
+        
+        // Pulisci l'URL dai parametri Nexi dopo la conferma
+        if (typeof window !== 'undefined') {
+          const cleanUrl = `${window.location.pathname}`;
+          window.history.replaceState({}, '', cleanUrl);
+        }
+      } catch (err) {
+        console.error('[Cart] Error confirming Nexi payment:', err);
+      }
+    };
+
+    confirmNexiPayment();
+  }, [searchParams, bookingExternalId, nexiConfirmationProcessed]);
+
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {
@@ -164,7 +225,7 @@ export default function ConfirmationPage() {
     }
 
     fetchBookingDetails()
-  }, [bookingExternalId])
+  }, [bookingExternalId, nexiConfirmationProcessed])
 
   const handleCancelBooking = async () => {
     try {
