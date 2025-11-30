@@ -27,8 +27,9 @@ export interface CreateSessionResult {
   provider: 'stripe' | 'nexi';
   // Per Stripe: sessionId da usare con redirectToCheckout
   sessionId?: string;
-  // Per Nexi: URL diretto alla hosted page
-  redirectUrl?: string;
+  // Per Nexi: form action e fields per POST submission
+  formAction?: string;
+  formFields?: Record<string, string>;
   // ID operazione (per referenza)
   operationId?: string;
 }
@@ -92,13 +93,12 @@ export async function createNexiSession(params: CreateSessionParams): Promise<Cr
     cancelUrl: `${params.baseUrl}/?step=checkout`,
     webhookUrl: `${params.baseUrl}/api/webhooks/nexi`,
     language: params.locale || 'it',
-    expiresInMinutes: 30,
   });
 
   return {
     provider: 'nexi',
-    redirectUrl: result.hostedPageUrl,
-    operationId: result.operationId,
+    formAction: result.formAction,
+    formFields: result.formFields,
   };
 }
 

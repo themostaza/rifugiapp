@@ -264,11 +264,28 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
       const data = await response.json();
 
       // ====================================================================
-      // NEXI: redirect diretto alla hosted page
+      // NEXI: form submission alla pagina di pagamento
       // ====================================================================
-      if (data.provider === 'nexi' && data.redirectUrl) {
-        console.log('Redirecting to Nexi hosted payment page');
-        window.location.href = data.redirectUrl;
+      if (data.provider === 'nexi' && data.formAction && data.formFields) {
+        console.log('Submitting form to Nexi payment page');
+        
+        // Crea un form nascosto e fai submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = data.formAction;
+        form.style.display = 'none';
+        
+        // Aggiungi tutti i campi del form
+        Object.entries(data.formFields as Record<string, string>).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
         return;
       }
 

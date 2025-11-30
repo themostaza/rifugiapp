@@ -22,21 +22,21 @@ export const isNexi = () => PAYMENT_PROVIDER === 'nexi';
  * Configurazione Nexi XPay
  * Variabili ambiente richieste quando PAYMENT_PROVIDER=nexi:
  * - NEXI_API_KEY: Chiave API (X-Api-Key header)
- * - NEXI_TERMINAL_ID: ID terminale esercente
+ * - NEXI_TERMINAL_ID: ID terminale esercente (Alias)
  * - NEXI_ENVIRONMENT: 'sandbox' | 'production'
  * - NEXI_WEBHOOK_SECRET: Secret per validare webhook (opzionale ma consigliato)
  */
 export const nexiConfig = {
   apiKey: process.env.NEXI_API_KEY || '',
-  terminalId: process.env.NEXI_TERMINAL_ID || '',
+  terminalId: process.env.NEXI_TERMINAL_ID || '', // Alias in Nexi
   environment: (process.env.NEXI_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production',
   webhookSecret: process.env.NEXI_WEBHOOK_SECRET || '',
   
-  // Base URL API
+  // Base URL API - XPay
   get baseUrl() {
     return this.environment === 'production' 
-      ? 'https://xpay.nexigroup.com/api/phoenix-0.0/psp/api/v1'
-      : 'https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1';
+      ? 'https://ecommerce.nexi.it'
+      : 'https://int-ecommerce.nexi.it';
   }
 };
 

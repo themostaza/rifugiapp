@@ -1,64 +1,56 @@
-import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { sendPaymentSuccessEmail } from '@/utils/emailService';
-import { NexiWebhookPayload, mapNexiResultToStatus } from '@/lib/payment/nexi-client';
-import { nexiConfig } from '@/lib/payment/config';
+import { verifyNexiWebhook, mapNexiResultToStatus, NexiWebhookPayload } from '@/lib/payment/nexi-client';
 
 /**
  * Webhook handler per notifiche Nexi XPay
  * 
- * Nexi invia notifiche server-to-server quando lo stato di un pagamento cambia.
- * Questo handler è l'equivalente di /api/webhooks/stripe/route.ts
+ * Nexi invia notifiche server-to-server con formato application/x-www-form-urlencoded
+ * quando lo stato di un pagamento cambia.
  * 
- * Eventi gestiti:
- * - Pagamento completato (AUTHORIZED/EXECUTED)
- * - Pagamento fallito (DECLINED/DENIED)
- * - Pagamento annullato (CANCELLED)
+ * Deve rispondere con HTTP 200 per confermare ricezione.
  */
 
 export async function POST(request: Request) {
   try {
-    const body = await request.text();
+    // Nexi invia i dati come form-urlencoded
+    const contentType = request.headers.get('content-type') || '';
     let payload: NexiWebhookPayload;
-
-    try {
-      payload = JSON.parse(body);
-    } catch {
-      console.error('[Nexi Webhook] Failed to parse request body');
-      return NextResponse.json(
-        { error: 'Invalid JSON payload' },
-        { status: 400 }
-      );
+    
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      const formData = await request.formData();
+      payload = Object.fromEntries(formData.entries()) as unknown as NexiWebhookPayload;
+    } else if (contentType.includes('application/json')) {
+      payload = await request.json();
+    } else {
+      // Prova a parsare come form-urlencoded dal body text
+      const bodyText = await request.text();
+      const params = new URLSearchParams(bodyText);
+      payload = Object.fromEntries(params.entries()) as unknown as NexiWebhookPayload;
     }
 
-    // Validazione del webhook (se configurato il secret)
-    if (nexiConfig.webhookSecret) {
-      // Nexi può inviare il token nell'header o nel payload
-      const headerToken = request.headers.get('x-security-token') || '';
-      const payloadToken = payload.securityToken || '';
-      
-      if (headerToken !== nexiConfig.webhookSecret && payloadToken !== nexiConfig.webhookSecret) {
-        console.warn('[Nexi Webhook] Security token mismatch');
-        // In produzione, potresti voler rifiutare. Per ora, loggiamo solo.
-        // return NextResponse.json({ error: 'Invalid security token' }, { status: 401 });
-      }
+    console.log('[Nexi Webhook] Received payload:', {
+      esito: payload.esito,
+      codTrans: payload.codTrans,
+      importo: payload.importo,
+      codAut: payload.codAut,
+    });
+
+    // Verifica MAC per autenticità
+    const isValidMAC = verifyNexiWebhook(payload);
+    if (!isValidMAC) {
+      console.warn('[Nexi Webhook] MAC verification failed - proceeding anyway for now');
+      // In produzione potresti voler rifiutare: return new Response('Invalid MAC', { status: 401 });
     }
 
-    const { operation } = payload;
+    const { esito, codTrans: bookingId, codAut } = payload;
 
-    if (!operation || !operation.orderId) {
-      console.warn('[Nexi Webhook] No orderId in payload');
-      return NextResponse.json(
-        { error: 'Missing orderId in webhook payload' },
-        { status: 400 }
-      );
+    if (!bookingId) {
+      console.error('[Nexi Webhook] No codTrans in payload');
+      return new Response('Missing codTrans', { status: 400 });
     }
 
-    const bookingId = operation.orderId; // Usiamo orderId come external_id della prenotazione
-    const operationResult = operation.operationResult;
-    const operationType = operation.operationType;
-
-    console.log(`[Nexi Webhook] Processing ${operationType} - ${operationResult} for booking: ${bookingId}`);
+    console.log(`[Nexi Webhook] Processing ${esito} for booking: ${bookingId}`);
 
     // Recupera la prenotazione dal DB
     const { data: bookingData, error: bookingFetchError } = await supabase
@@ -77,15 +69,15 @@ export async function POST(request: Request) {
 
     if (bookingFetchError) {
       console.error(`[Nexi Webhook] Error fetching booking ${bookingId}:`, bookingFetchError);
-      return NextResponse.json({ error: 'Failed to fetch booking' }, { status: 500 });
+      return new Response('Booking fetch error', { status: 500 });
     }
 
     if (!bookingData) {
       console.error(`[Nexi Webhook] Booking not found: ${bookingId}`);
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+      return new Response('Booking not found', { status: 404 });
     }
 
-    const status = mapNexiResultToStatus(operationResult);
+    const status = mapNexiResultToStatus(esito);
 
     // Handler per pagamento completato con successo
     const handleSuccessfulPayment = async () => {
@@ -94,8 +86,8 @@ export async function POST(request: Request) {
         return;
       }
 
-      const emailTo = operation.customerInfo?.cardHolderEmail || bookingData.mail;
-      const name = operation.customerInfo?.cardHolderName || bookingData.name;
+      const emailTo = payload.mail || bookingData.mail;
+      const name = payload.nome ? `${payload.nome} ${payload.cognome || ''}`.trim() : bookingData.name;
 
       if (!emailTo) {
         console.error(`[Nexi Webhook] Cannot send email for ${bookingId}: no recipient email`);
@@ -129,7 +121,7 @@ export async function POST(request: Request) {
       }
     };
 
-    // Gestisci i diversi risultati
+    // Gestisci i diversi esiti
     switch (status) {
       case 'success':
         console.log(`[Nexi Webhook] Payment successful for ${bookingId}`);
@@ -145,9 +137,9 @@ export async function POST(request: Request) {
           .from('Basket')
           .update({
             isPaid: true,
-            paymentIntentId: operation.operationId, // Usiamo operationId come riferimento pagamento
-            nexiOperationId: operation.operationId,
-            nexiPaymentCircuit: operation.paymentCircuit,
+            paymentIntentId: codAut || '', // Codice autorizzazione come riferimento
+            nexiOperationId: codAut || '',
+            nexiPaymentCircuit: payload.brand || '',
             updatedAt: new Date().toISOString(),
           })
           .eq('external_id', bookingId)
@@ -156,7 +148,7 @@ export async function POST(request: Request) {
 
         if (updateError) {
           console.error(`[Nexi Webhook] Error updating booking ${bookingId}:`, updateError);
-          return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
+          return new Response('Failed to update booking', { status: 500 });
         }
 
         console.log(`[Nexi Webhook] Booking ${bookingId} marked as paid`);
@@ -164,13 +156,13 @@ export async function POST(request: Request) {
         break;
 
       case 'failed':
-        console.log(`[Nexi Webhook] Payment failed for ${bookingId}: ${operationResult}`);
+        console.log(`[Nexi Webhook] Payment failed for ${bookingId}: ${esito}`);
         
         const { error: failError } = await supabase
           .from('Basket')
           .update({
             isCancelled: true,
-            cancellationReason: `nexi_payment_failed: ${operationResult}`,
+            cancellationReason: `nexi_payment_failed: ${payload.messaggio || esito}`,
             updatedAt: new Date().toISOString()
           })
           .eq('external_id', bookingId)
@@ -199,21 +191,20 @@ export async function POST(request: Request) {
         }
         break;
 
+      case 'pending':
+        console.log(`[Nexi Webhook] Payment pending for ${bookingId}`);
+        // Non fare nulla, aspetta la notifica finale
+        break;
+
       default:
-        console.log(`[Nexi Webhook] Unhandled status ${status} (${operationResult}) for ${bookingId}`);
+        console.log(`[Nexi Webhook] Unhandled status ${status} (${esito}) for ${bookingId}`);
     }
 
-    return NextResponse.json({ received: true });
+    // IMPORTANTE: Nexi richiede HTTP 200 per confermare ricezione
+    return new Response('OK', { status: 200 });
 
   } catch (error: unknown) {
     console.error('[Nexi Webhook] Critical error:', error);
-    return NextResponse.json(
-      { error: 'Webhook handler failed' },
-      { status: 500 }
-    );
+    return new Response('Webhook handler failed', { status: 500 });
   }
 }
-
-
-
-

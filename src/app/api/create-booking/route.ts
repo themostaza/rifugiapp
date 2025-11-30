@@ -28,28 +28,27 @@ export async function POST(request: Request) {
     // NEXI PAYMENT FLOW
     // ========================================================================
     if (PAYMENT_PROVIDER === 'nexi') {
-      console.log('Creating Nexi order for basket:', basket.id);
+      console.log('Creating Nexi payment form for basket:', basket.id);
       
       const nexiResult = await createNexiOrder({
         orderId: basket.external_id,
         amount: body.totalAmount,
-        description: `Check-in: ${new Date(body.checkIn).toLocaleDateString('it-IT')} Check-out: ${new Date(body.checkOut).toLocaleDateString('it-IT')}`,
+        description: `Rifugio Dibona - Check-in: ${new Date(body.checkIn).toLocaleDateString('it-IT')} Check-out: ${new Date(body.checkOut).toLocaleDateString('it-IT')}`,
         customerEmail: body.customerEmail,
+        customerName: body.customerName,
         successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/cart/${basket.external_id}?payment_status=success`,
         cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/?step=checkout`,
         webhookUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/nexi`,
         language: 'it',
-        expiresInMinutes: 30,
       });
 
-      console.log('Nexi order created, hostedPage URL obtained');
+      console.log('Nexi payment form created');
 
-      // Update basket con info Nexi
+      // Update basket con info Nexi (codTrans = external_id)
       const { error: updateError } = await supabase
         .from('Basket')
         .update({
           nexiOrderId: basket.external_id,
-          nexiSecurityToken: nexiResult.securityToken,
         })
         .eq('id', basket.id);
 
@@ -59,10 +58,12 @@ export async function POST(request: Request) {
       }
       console.log('Basket updated with Nexi information');
 
+      // Restituisci i dati per il form submission
       return NextResponse.json({ 
         success: true, 
         provider: 'nexi',
-        redirectUrl: nexiResult.hostedPageUrl, // URL diretto per redirect
+        formAction: nexiResult.formAction,
+        formFields: nexiResult.formFields,
         basketId: basket.id
       });
     }

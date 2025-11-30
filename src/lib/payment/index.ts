@@ -17,16 +17,15 @@ export {
 
 // Client Nexi
 export { 
-  createNexiOrder, 
+  createNexiOrder,
+  createNexiPaymentForm,
   createNexiRefund, 
-  getNexiOrderDetails,
-  validateNexiWebhook,
+  verifyNexiWebhook,
   mapNexiResultToStatus,
-  type NexiOrderRequest,
-  type NexiOrderResponse,
-  type NexiRefundRequest,
-  type NexiRefundResponse,
-  type NexiWebhookPayload
+  type NexiPaymentParams,
+  type NexiPaymentResult,
+  type NexiWebhookPayload,
+  type NexiRefundRequest
 } from './nexi-client';
 
 // Session creation (abstraction layer)

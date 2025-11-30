@@ -1,132 +1,170 @@
 /**
  * Nexi XPay Client
  * 
- * Client per interagire con le API Nexi XPay.
- * Usa la Hosted Payment Page (HPP) per il checkout - stesso approccio di Stripe Checkout.
+ * Client per interagire con Nexi XPay.
+ * XPay usa un FORM SUBMISSION per redirect alla pagina di pagamento,
+ * NON una chiamata API REST come Stripe.
  * 
  * Documentazione: https://developer.nexi.it
  */
 
+import { createHash } from 'crypto';
 import { nexiConfig } from './config';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface NexiOrderRequest {
-  order: {
-    orderId: string;
-    amount: string; // In centesimi come stringa (es: "5000" per €50.00)
-    currency: string; // "EUR"
-    description?: string;
-    customField?: string; // Metadati custom (es: bookingId)
-  };
-  paymentSession: {
-    amount: string;
-    actionType: 'PAY'; // Per pagamento diretto
-    recurrence?: {
-      action: 'NO_RECURRING';
-    };
-    language: string; // 'ITA', 'ENG', etc.
-    resultUrl: string; // URL di ritorno dopo pagamento (success/cancel)
-    cancelUrl: string; // URL se l'utente annulla
-    notificationUrl: string; // Webhook URL per notifiche server-to-server
-    expirationTime?: string; // ISO timestamp scadenza sessione
-  };
-  card?: {
-    billingAddress?: {
-      name?: string;
-      email?: string;
-    };
-  };
+export interface NexiPaymentParams {
+  codTrans: string;      // Codice transazione univoco (es: external_id)
+  importo: number;       // Importo in EURO (es: 153.00)
+  descrizione?: string;  // Descrizione ordine
+  mail?: string;         // Email cliente
+  nome?: string;         // Nome cliente
+  cognome?: string;      // Cognome cliente
+  urlSuccess: string;    // URL ritorno success/failure
+  urlBack: string;       // URL annullamento
+  urlPost?: string;      // Webhook server-to-server (opzionale)
+  languageId?: string;   // Lingua (ITA, ENG, etc.)
 }
 
-export interface NexiOrderResponse {
-  hostedPage: string; // URL della pagina di pagamento hosted
-  securityToken: string;
-  operation: {
-    orderId: string;
-    operationId: string;
-    operationType: string;
-    operationResult: string;
-    operationTime: string;
-    paymentMethod: string;
-    paymentCircuit: string;
-    paymentEndToEndId: string;
-    cancelledOperationId: string;
-    operationAmount: string;
-    operationCurrency: string;
-  };
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
-}
-
-export interface NexiRefundRequest {
-  amount: string; // In centesimi come stringa
-  currency: string;
-  description?: string;
-}
-
-export interface NexiRefundResponse {
-  operationId: string;
-  operationResult: string;
-  operationTime: string;
-  paymentMethod: string;
-  paymentCircuit: string;
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
+export interface NexiPaymentResult {
+  formAction: string;    // URL del form (endpoint Nexi)
+  formFields: Record<string, string>;  // Campi del form da inviare
 }
 
 export interface NexiWebhookPayload {
-  securityToken: string;
-  operation: {
-    orderId: string;
-    operationId: string;
-    operationType: string; // 'AUTHORIZATION', 'CAPTURE', 'VOID', 'REFUND'
-    operationResult: string; // 'AUTHORIZED', 'EXECUTED', 'DECLINED', 'CANCELLED', etc.
-    operationTime: string;
-    paymentMethod: string;
-    paymentCircuit: string;
-    paymentEndToEndId: string;
-    cancelledOperationId: string;
-    operationAmount: string;
-    operationCurrency: string;
-    customerInfo?: {
-      cardHolderName?: string;
-      cardHolderEmail?: string;
-    };
-  };
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
+  esito: 'OK' | 'KO' | 'ANNULLO' | 'ERRORE' | 'PEN';
+  codiceEsito?: string;
+  messaggio?: string;
+  codAut?: string;
+  alias: string;
+  importo: string;
+  divisa: string;
+  codTrans: string;
+  data?: string;
+  orario?: string;
+  mac: string;
+  pan?: string;
+  scadenza_pan?: string;
+  brand?: string;
+  nazionalita?: string;
+  mail?: string;
+  nome?: string;
+  cognome?: string;
+}
+
+export interface NexiRefundRequest {
+  codTrans: string;      // Codice transazione originale
+  importo: number;       // Importo da rimborsare in EURO
+  divisa?: string;       // Divisa (default EUR)
 }
 
 // ============================================================================
-// CLIENT METHODS
+// MAC CALCULATION
 // ============================================================================
 
 /**
- * Headers comuni per tutte le chiamate API Nexi
+ * Calcola il MAC per l'avvio pagamento
+ * Formula: SHA1(codTrans=<val>divisa=<val>importo=<val><chiaveSegreta>)
  */
-function getHeaders(): HeadersInit {
+function calculatePaymentMAC(codTrans: string, divisa: string, importo: string): string {
+  const stringToSign = `codTrans=${codTrans}divisa=${divisa}importo=${importo}${nexiConfig.apiKey}`;
+  console.log('[Nexi] MAC string to sign:', stringToSign.replace(nexiConfig.apiKey, '***SECRET***'));
+  
+  const mac = createHash('sha1').update(stringToSign, 'utf8').digest('hex');
+  console.log('[Nexi] Calculated MAC:', mac);
+  return mac;
+}
+
+/**
+ * Calcola il MAC per verificare l'esito
+ * Formula: SHA1(codTrans=<val>esito=<val>importo=<val>divisa=<val>data=<val>orario=<val>codAut=<val><chiaveSegreta>)
+ */
+function calculateResponseMAC(
+  codTrans: string, 
+  esito: string, 
+  importo: string, 
+  divisa: string, 
+  data: string, 
+  orario: string, 
+  codAut: string
+): string {
+  const stringToSign = `codTrans=${codTrans}esito=${esito}importo=${importo}divisa=${divisa}data=${data}orario=${orario}codAut=${codAut}${nexiConfig.apiKey}`;
+  return createHash('sha1').update(stringToSign, 'utf8').digest('hex');
+}
+
+// ============================================================================
+// PAYMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Genera i dati per il form di pagamento Nexi
+ * Il frontend dovrà creare un form e fare submit, oppure redirect con POST
+ */
+export function createNexiPaymentForm(params: NexiPaymentParams): NexiPaymentResult {
+  // Converti importo in centesimi (stringa senza separatori)
+  const importoInCentesimi = Math.round(params.importo * 100).toString();
+  const divisa = 'EUR';
+  
+  // Calcola MAC
+  const mac = calculatePaymentMAC(params.codTrans, divisa, importoInCentesimi);
+  
+  // URL endpoint
+  const formAction = `${nexiConfig.baseUrl}/ecomm/ecomm/DispatcherServlet`;
+  
+  // Campi del form
+  const formFields: Record<string, string> = {
+    alias: nexiConfig.terminalId,
+    importo: importoInCentesimi,
+    divisa: divisa,
+    codTrans: params.codTrans,
+    url: params.urlSuccess,
+    url_back: params.urlBack,
+    mac: mac,
+  };
+  
+  // Campi opzionali
+  if (params.urlPost) {
+    formFields.urlpost = params.urlPost;
+  }
+  if (params.mail) {
+    formFields.mail = params.mail;
+  }
+  if (params.nome) {
+    formFields.nome = params.nome;
+  }
+  if (params.cognome) {
+    formFields.cognome = params.cognome;
+  }
+  if (params.descrizione) {
+    formFields.descrizione = params.descrizione;
+  }
+  if (params.languageId) {
+    formFields.languageId = params.languageId;
+  }
+  
+  console.log('[Nexi] Payment form created:', {
+    formAction,
+    alias: formFields.alias,
+    importo: formFields.importo,
+    codTrans: formFields.codTrans,
+    url: formFields.url,
+    url_back: formFields.url_back,
+  });
+  
   return {
-    'Content-Type': 'application/json',
-    'X-Api-Key': nexiConfig.apiKey,
+    formAction,
+    formFields,
   };
 }
 
 /**
- * Crea un ordine e ottiene l'URL della Hosted Payment Page
- * Equivalente a stripe.checkout.sessions.create()
+ * Funzione legacy per compatibilità - ora genera i dati del form
  */
 export async function createNexiOrder(params: {
-  orderId: string; // external_id della prenotazione
-  amount: number; // In euro (es: 150.50)
+  orderId: string;
+  amount: number;
   description: string;
   customerEmail?: string;
   customerName?: string;
@@ -135,161 +173,112 @@ export async function createNexiOrder(params: {
   webhookUrl: string;
   language?: string;
   expiresInMinutes?: number;
-}): Promise<{ hostedPageUrl: string; securityToken: string; operationId: string }> {
+}): Promise<{ formAction: string; formFields: Record<string, string> }> {
   
-  const amountInCents = Math.round(params.amount * 100).toString();
+  // Estrai nome e cognome se possibile
+  const nameParts = params.customerName?.split(' ') || [];
+  const nome = nameParts[0] || '';
+  const cognome = nameParts.slice(1).join(' ') || '';
   
-  // Calcola expiration time (default 30 minuti, come Stripe)
-  const expirationTime = new Date(
-    Date.now() + (params.expiresInMinutes || 30) * 60 * 1000
-  ).toISOString();
-
-  const requestBody: NexiOrderRequest = {
-    order: {
-      orderId: params.orderId,
-      amount: amountInCents,
-      currency: 'EUR',
-      description: params.description,
-      customField: params.orderId, // Usiamo per passare bookingId come metadata
-    },
-    paymentSession: {
-      amount: amountInCents,
-      actionType: 'PAY',
-      recurrence: {
-        action: 'NO_RECURRING',
-      },
-      language: mapLanguageToNexi(params.language || 'it'),
-      resultUrl: params.successUrl,
-      cancelUrl: params.cancelUrl,
-      notificationUrl: params.webhookUrl,
-      expirationTime: expirationTime,
-    },
-    card: params.customerEmail ? {
-      billingAddress: {
-        name: params.customerName,
-        email: params.customerEmail,
-      },
-    } : undefined,
-  };
-
-  const response = await fetch(`${nexiConfig.baseUrl}/orders/hpp`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify(requestBody),
+  const result = createNexiPaymentForm({
+    codTrans: params.orderId,
+    importo: params.amount,
+    descrizione: params.description,
+    mail: params.customerEmail,
+    nome: nome,
+    cognome: cognome,
+    urlSuccess: params.successUrl,
+    urlBack: params.cancelUrl,
+    urlPost: params.webhookUrl,
+    languageId: mapLanguageToNexi(params.language || 'it'),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error('[Nexi] Error creating order:', errorData);
-    throw new Error(`Nexi API error: ${response.status} - ${JSON.stringify(errorData)}`);
-  }
-
-  const data: NexiOrderResponse = await response.json();
-
-  if (data.errors && data.errors.length > 0) {
-    console.error('[Nexi] Order creation errors:', data.errors);
-    throw new Error(`Nexi error: ${data.errors.map(e => e.description).join(', ')}`);
-  }
-
-  return {
-    hostedPageUrl: data.hostedPage,
-    securityToken: data.securityToken,
-    operationId: data.operation?.operationId || '',
-  };
+  
+  return result;
 }
 
 /**
- * Esegue un rimborso
- * Equivalente a stripe.refunds.create()
+ * Verifica il MAC della risposta/webhook Nexi
+ */
+export function verifyNexiWebhook(payload: NexiWebhookPayload): boolean {
+  if (!payload.mac) {
+    console.warn('[Nexi] No MAC in webhook payload');
+    return false;
+  }
+  
+  const expectedMAC = calculateResponseMAC(
+    payload.codTrans,
+    payload.esito,
+    payload.importo,
+    payload.divisa,
+    payload.data || '',
+    payload.orario || '',
+    payload.codAut || ''
+  );
+  
+  const isValid = payload.mac.toLowerCase() === expectedMAC.toLowerCase();
+  
+  if (!isValid) {
+    console.error('[Nexi] MAC verification failed:', {
+      received: payload.mac,
+      expected: expectedMAC,
+    });
+  }
+  
+  return isValid;
+}
+
+/**
+ * Esegue un rimborso tramite API Nexi
+ * Nota: i rimborsi in XPay si fanno tramite API separata o back office
  */
 export async function createNexiRefund(params: {
-  operationId: string; // ID dell'operazione originale da rimborsare
-  amount: number; // In euro
+  operationId: string;
+  amount: number;
   description?: string;
 }): Promise<{ operationId: string; result: string }> {
-
-  const amountInCents = Math.round(params.amount * 100).toString();
-
-  const requestBody: NexiRefundRequest = {
-    amount: amountInCents,
-    currency: 'EUR',
-    description: params.description || 'Refund',
+  // Per XPay classico, i rimborsi si gestiscono tramite:
+  // 1. Back office manuale
+  // 2. API di contabilizzazione/storno
+  
+  // Endpoint per storno: /ecomm/api/bo/storna
+  const importoInCentesimi = Math.round(params.amount * 100).toString();
+  
+  const requestBody = {
+    apiKey: nexiConfig.apiKey,
+    codTrans: params.operationId,
+    importo: importoInCentesimi,
+    divisa: 'EUR',
   };
-
-  const response = await fetch(`${nexiConfig.baseUrl}/operations/${params.operationId}/refunds`, {
+  
+  console.log('[Nexi] Refund request:', {
+    codTrans: params.operationId,
+    importo: importoInCentesimi,
+  });
+  
+  const response = await fetch(`${nexiConfig.baseUrl}/ecomm/api/bo/storna`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(requestBody),
   });
-
+  
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error('[Nexi] Error creating refund:', errorData);
-    throw new Error(`Nexi refund error: ${response.status} - ${JSON.stringify(errorData)}`);
-  }
-
-  const data: NexiRefundResponse = await response.json();
-
-  if (data.errors && data.errors.length > 0) {
-    console.error('[Nexi] Refund errors:', data.errors);
-    throw new Error(`Nexi refund error: ${data.errors.map(e => e.description).join(', ')}`);
-  }
-
-  return {
-    operationId: data.operationId,
-    result: data.operationResult,
-  };
-}
-
-/**
- * Recupera i dettagli di un ordine
- */
-export async function getNexiOrderDetails(orderId: string): Promise<{
-  orderId: string;
-  amount: number;
-  currency: string;
-  status: string;
-  operationId?: string;
-}> {
-  const response = await fetch(`${nexiConfig.baseUrl}/orders/${orderId}`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error('[Nexi] Error fetching order:', errorData);
-    throw new Error(`Nexi API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  return {
-    orderId: data.order?.orderId,
-    amount: parseInt(data.order?.amount || '0') / 100,
-    currency: data.order?.currency,
-    status: data.orderStatus?.lastOperationResult || 'unknown',
-    operationId: data.orderStatus?.lastOperationId,
-  };
-}
-
-/**
- * Valida la firma del webhook Nexi
- */
-export function validateNexiWebhook(
-  payload: NexiWebhookPayload,
-  receivedToken: string
-): boolean {
-  // Nexi usa un securityToken per validare i webhook
-  // Il token viene generato durante la creazione dell'ordine e deve matchare
-  if (!nexiConfig.webhookSecret) {
-    console.warn('[Nexi] Webhook secret not configured, skipping validation');
-    return true; // In dev senza secret, accetta tutto
+    const errorText = await response.text();
+    console.error('[Nexi] Refund error:', errorText);
+    throw new Error(`Nexi refund error: ${response.status} - ${errorText}`);
   }
   
-  // La validazione dipende dalla configurazione specifica di Nexi
-  // In produzione, confronta il securityToken con quello salvato durante la creazione
-  return payload.securityToken === receivedToken;
+  const data = await response.json();
+  
+  if (data.esito !== 'OK') {
+    throw new Error(`Nexi refund failed: ${data.messaggio || data.esito}`);
+  }
+  
+  return {
+    operationId: params.operationId,
+    result: data.esito,
+  };
 }
 
 /**
@@ -307,19 +296,23 @@ function mapLanguageToNexi(lang: string): string {
 }
 
 /**
- * Mappa il risultato operazione Nexi a stato semplificato
+ * Mappa l'esito Nexi a stato semplificato
  */
-export function mapNexiResultToStatus(operationResult: string): 'success' | 'failed' | 'pending' | 'cancelled' {
-  const successResults = ['AUTHORIZED', 'EXECUTED', 'CAPTURED'];
-  const failedResults = ['DECLINED', 'DENIED', 'FAILED', 'ERROR'];
-  const cancelledResults = ['CANCELLED', 'VOIDED'];
-  
-  if (successResults.includes(operationResult.toUpperCase())) return 'success';
-  if (failedResults.includes(operationResult.toUpperCase())) return 'failed';
-  if (cancelledResults.includes(operationResult.toUpperCase())) return 'cancelled';
-  return 'pending';
+export function mapNexiResultToStatus(esito: string): 'success' | 'failed' | 'pending' | 'cancelled' {
+  switch (esito.toUpperCase()) {
+    case 'OK':
+      return 'success';
+    case 'KO':
+    case 'ERRORE':
+      return 'failed';
+    case 'ANNULLO':
+      return 'cancelled';
+    case 'PEN':
+      return 'pending';
+    default:
+      return 'failed';
+  }
 }
 
-
-
-
+// Export types for webhook
+export type { NexiWebhookPayload as NexiWebhookPayloadType };
