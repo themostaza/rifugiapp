@@ -44,11 +44,12 @@ export async function POST(request: Request) {
 
       console.log('Nexi payment form created');
 
-      // Update basket con info Nexi (codTrans = external_id)
+      // Update basket con info Nexi (codTrans è quello troncato, nei formFields)
+      const nexiCodTrans = nexiResult.formFields.codTrans;
       const { error: updateError } = await supabase
         .from('Basket')
         .update({
-          nexiOrderId: basket.external_id,
+          nexiOrderId: nexiCodTrans, // Salva il codTrans effettivo usato da Nexi
         })
         .eq('id', basket.id);
 

@@ -61,6 +61,36 @@ export interface NexiRefundRequest {
 }
 
 // ============================================================================
+// UTILITIES
+// ============================================================================
+
+/**
+ * Converte un external_id (UUID) in un codTrans valido per Nexi
+ * Nexi richiede: AN MIN 2 MAX 30 caratteri, esclusi # ' "
+ * UUID standard: 36 caratteri con trattini (es: be2f45d2-6e14-4e42-942b-b094f2846656)
+ * 
+ * Strategia: rimuoviamo i trattini (32 char) e prendiamo i primi 30
+ */
+export function toNexiCodTrans(externalId: string): string {
+  // Rimuovi i trattini e prendi i primi 30 caratteri
+  const codTrans = externalId.replace(/-/g, '').substring(0, 30);
+  console.log(`[Nexi] Converted external_id to codTrans: ${externalId} -> ${codTrans} (${codTrans.length} chars)`);
+  return codTrans;
+}
+
+/**
+ * Converte un codTrans Nexi indietro all'external_id originale
+ * Nota: questa conversione richiede una lookup nel database poiché
+ * la conversione non è reversibile (abbiamo perso 2 caratteri)
+ */
+export function fromNexiCodTrans(codTrans: string): string {
+  // Il codTrans è l'UUID senza trattini, troncato a 30 char
+  // Per trovare l'external_id originale, dobbiamo fare una lookup
+  // che inizia con questo prefisso
+  return codTrans;
+}
+
+// ============================================================================
 // MAC CALCULATION
 // ============================================================================
 
@@ -180,8 +210,11 @@ export async function createNexiOrder(params: {
   const nome = nameParts[0] || '';
   const cognome = nameParts.slice(1).join(' ') || '';
   
+  // Converti l'orderId (UUID) in un codTrans valido per Nexi (max 30 char)
+  const codTrans = toNexiCodTrans(params.orderId);
+  
   const result = createNexiPaymentForm({
-    codTrans: params.orderId,
+    codTrans: codTrans,
     importo: params.amount,
     descrizione: params.description,
     mail: params.customerEmail,
