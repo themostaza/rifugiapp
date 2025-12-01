@@ -17,6 +17,9 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   
+  // Check payment provider per nascondere link Stripe se si usa Nexi
+  const paymentProvider = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER || 'stripe';
+  
 //   useEffect(() => {
 //     const fetchUserProfile = async () => {
 //       try {
@@ -95,17 +98,20 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
         icon: <FileText className="h-5 w-5" />,  
         href: '/admin_power/report' 
     },
-    {
-      name: 'Stripe Check',
-      icon: <ExternalLink className="h-5 w-5" />,  
-      href: '/stripe_check',
-    },
-    { 
+    // Link Stripe - mostrati solo se PAYMENT_PROVIDER !== 'nexi'
+    ...(paymentProvider !== 'nexi' ? [
+      {
+        name: 'Stripe Check',
+        icon: <ExternalLink className="h-5 w-5" />,  
+        href: '/stripe_check',
+      },
+      { 
         name: 'Vai a Stripe',
         icon: <ExternalLink className="h-5 w-5" />,
         href: 'https://dashboard.stripe.com',
         className: 'border border-violet-600'
-    },
+      },
+    ] : []),
   ];
 
   return (

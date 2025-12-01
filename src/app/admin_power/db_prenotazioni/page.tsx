@@ -27,6 +27,10 @@ interface BasketEntry {
   region?: string | null;
   stripeId?: string | null;
   paymentIntentId?: string | null;
+  // Campi Nexi
+  nexiOrderId?: string | null;
+  nexiOperationId?: string | null;
+  nexiPaymentCircuit?: string | null;
   isCancelled?: boolean | null;
   external_id?: string | null;
   booking_details?: unknown | null; // Changed from any to unknown
@@ -65,6 +69,9 @@ const DBPrenotazioniPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<BasketEntry | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  
+  // Payment provider per condizionare UI
+  const paymentProvider = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER || 'stripe';
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -554,7 +561,8 @@ const DBPrenotazioniPage = () => {
                     </Button>
                   </Link>
                 )}
-                {selectedEntry.paymentIntentId && (
+                {/* Pulsante Stripe - solo se c'è paymentIntentId (pagamento Stripe) */}
+                {selectedEntry.paymentIntentId && paymentProvider === 'stripe' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -605,8 +613,21 @@ const DBPrenotazioniPage = () => {
                       <p className="text-xs text-gray-500">Esterno ID</p>
                       <p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block">{selectedEntry.external_id || 'N/A'}</p>
                   </div>
-                  <div><p className="text-xs text-gray-500">Stripe ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.stripeId || 'N/A'}</p></div>
-                  <div><p className="text-xs text-gray-500">Payment Intent ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.paymentIntentId || 'N/A'}</p></div>
+                  {/* Info pagamento - mostra campi rilevanti in base al provider */}
+                  {selectedEntry.nexiOrderId ? (
+                    <>
+                      <div><p className="text-xs text-gray-500">ID Pagamento (Nexi)</p><p className="font-mono text-xs bg-green-100 p-1 rounded inline-block break-all">{selectedEntry.nexiOrderId}</p></div>
+                      <div><p className="text-xs text-gray-500">Codice Autorizzazione</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.nexiOperationId || 'N/A'}</p></div>
+                      {selectedEntry.nexiPaymentCircuit && (
+                        <div><p className="text-xs text-gray-500">Circuito</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block">{selectedEntry.nexiPaymentCircuit}</p></div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div><p className="text-xs text-gray-500">Stripe ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.stripeId || 'N/A'}</p></div>
+                      <div><p className="text-xs text-gray-500">Payment Intent ID</p><p className="font-mono text-xs bg-gray-100 p-1 rounded inline-block break-all">{selectedEntry.paymentIntentId || 'N/A'}</p></div>
+                    </>
+                  )}
                   
                   <div><p className="text-xs text-gray-500">Creata il</p><p className="font-medium">{new Date(selectedEntry.createdAt).toLocaleString('it-IT')}</p></div>
                   <div><p className="text-xs text-gray-500">Aggiornata il</p><p className="font-medium">{new Date(selectedEntry.updatedAt).toLocaleString('it-IT')}</p></div>

@@ -60,6 +60,10 @@ interface DetailedReservation {
   isCreatedByAdmin: boolean | null;
   stripeId: string | null;
   paymentIntentId: string | null;
+  // Campi Nexi
+  nexiOrderId?: string | null;
+  nexiOperationId?: string | null;
+  nexiPaymentCircuit?: string | null;
   external_id: string | null;
   RoomReservation: RoomReservation[] | null; // Use the copied interface
   guestBreakdown: {
@@ -553,19 +557,43 @@ const DaySheet = ({ isOpen, onClose, date, isBlocked, onDayBlockToggle }: DayShe
             )}
             
             {/* Payment details if available */}
-            {(reservation.stripeId || reservation.paymentIntentId) && (
+            {(reservation.stripeId || reservation.paymentIntentId || reservation.nexiOrderId) && (
               <div className="mt-3 space-y-1 text-xs text-gray-500">
-                {reservation.stripeId && (
-                  <div className="flex flex-wrap items-center">
-                    <span className="mr-1">Stripe ID:</span>
-                    <span className="font-mono bg-gray-100 px-1 py-0.5 rounded break-all">{reservation.stripeId}</span>
-                  </div>
-                )}
-                {reservation.paymentIntentId && (
-                  <div className="flex flex-wrap items-center">
-                    <span className="mr-1">Payment Intent:</span>
-                    <span className="font-mono bg-gray-100 px-1 py-0.5 rounded break-all">{reservation.paymentIntentId}</span>
-                  </div>
+                {/* Mostra info Nexi se presente */}
+                {reservation.nexiOrderId ? (
+                  <>
+                    <div className="flex flex-wrap items-center">
+                      <span className="mr-1">ID Pagamento (Nexi):</span>
+                      <span className="font-mono bg-green-100 px-1 py-0.5 rounded break-all">{reservation.nexiOrderId}</span>
+                    </div>
+                    {reservation.nexiOperationId && (
+                      <div className="flex flex-wrap items-center">
+                        <span className="mr-1">Cod. Autorizzazione:</span>
+                        <span className="font-mono bg-gray-100 px-1 py-0.5 rounded break-all">{reservation.nexiOperationId}</span>
+                      </div>
+                    )}
+                    {reservation.nexiPaymentCircuit && (
+                      <div className="flex flex-wrap items-center">
+                        <span className="mr-1">Circuito:</span>
+                        <span className="font-mono bg-gray-100 px-1 py-0.5 rounded">{reservation.nexiPaymentCircuit}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {reservation.stripeId && (
+                      <div className="flex flex-wrap items-center">
+                        <span className="mr-1">Stripe ID:</span>
+                        <span className="font-mono bg-gray-100 px-1 py-0.5 rounded break-all">{reservation.stripeId}</span>
+                      </div>
+                    )}
+                    {reservation.paymentIntentId && (
+                      <div className="flex flex-wrap items-center">
+                        <span className="mr-1">Payment Intent:</span>
+                        <span className="font-mono bg-gray-100 px-1 py-0.5 rounded break-all">{reservation.paymentIntentId}</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

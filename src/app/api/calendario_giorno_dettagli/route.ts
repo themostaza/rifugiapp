@@ -60,6 +60,10 @@ interface BasketWithDetails {
   isCreatedByAdmin: boolean | null;
   stripeId: string | null;
   paymentIntentId: string | null;
+  // Campi Nexi
+  nexiOrderId: string | null;
+  nexiOperationId: string | null;
+  nexiPaymentCircuit: string | null;
   external_id: string | null;
   RoomReservation: RoomReservation[] | null; 
 }
@@ -85,7 +89,7 @@ export async function GET(request: Request) {
     const { data: baskets, error } = await supabase
       .from('Basket')
       .select(`
-        id, name, surname, dayFrom, dayTo, mail, phone, city, region, reservationType, totalPrice, isPaid, note, isCreatedByAdmin, stripeId, paymentIntentId, external_id,
+        id, name, surname, dayFrom, dayTo, mail, phone, city, region, reservationType, totalPrice, isPaid, note, isCreatedByAdmin, stripeId, paymentIntentId, nexiOrderId, nexiOperationId, nexiPaymentCircuit, external_id,
         RoomReservation (
           id,
           RoomReservationSpec (
@@ -155,6 +159,9 @@ export async function GET(request: Request) {
         isCreatedByAdmin: basket.isCreatedByAdmin,
         stripeId: basket.stripeId,
         paymentIntentId: basket.paymentIntentId,
+        nexiOrderId: basket.nexiOrderId,
+        nexiOperationId: basket.nexiOperationId,
+        nexiPaymentCircuit: basket.nexiPaymentCircuit,
         external_id: basket.external_id,
         RoomReservation: basket.RoomReservation,
         guestBreakdown: { adults, children, infants }
