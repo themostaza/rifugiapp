@@ -70,7 +70,8 @@ interface BookingData {
   isPaid: boolean;
   isCancelled: boolean;
   createdAt: string;
-  stripeId: string; // Payment ID
+  stripeId: string; // Payment ID (legacy, per retrocompatibilità)
+  paymentId: string; // ID Pagamento dinamico (Nexi o Stripe)
   isCreatedByAdmin: boolean;
   cityTaxTotal: number; // Calculated total city tax from API
   totalPrivacyCost: number; // Added: Sum of bedBlockPriceTotal from RoomReservations
@@ -332,8 +333,8 @@ export default function ConfirmationPage() {
                   <div class="value">${bookingData.id}</div>
                 </div>
                 <div>
-                  <div class="label">${translations.pdf?.paymentId || 'ID Pagamento (Stripe)'}</div>
-                  <div class="value">${bookingData.stripeId || 'N/A'}</div>
+                  <div class="label">${translations.pdf?.paymentId || 'ID Pagamento'}</div>
+                  <div class="value">${bookingData.paymentId || 'N/A'}</div>
                 </div>
                 <div>
                   <div class="label">${translations.pdf?.checkIn || 'Check-in'}</div>
@@ -844,8 +845,8 @@ export default function ConfirmationPage() {
                   <p className="font-medium break-all">{bookingData.id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">{translations.paymentId || 'ID Pagamento (Stripe)'}</p>
-                  <p className="font-medium break-all">{bookingData.stripeId || 'N/A'}</p>
+                  <p className="text-sm text-gray-500">{translations.paymentId || 'ID Pagamento'}</p>
+                  <p className="font-medium break-all">{bookingData.paymentId || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">{translations.checkIn || 'Check-in'}</p>

@@ -55,9 +55,9 @@ export interface NexiWebhookPayload {
 }
 
 export interface NexiRefundRequest {
-  codTrans: string;      // Codice transazione originale
-  importo: number;       // Importo da rimborsare in EURO
-  divisa?: string;       // Divisa (default EUR)
+  codiceTransazione: string;  // Il codTrans usato nel pagamento originale
+  amount: number;             // Importo da rimborsare in EURO
+  description?: string;       // Descrizione opzionale
 }
 
 // ============================================================================
@@ -261,55 +261,88 @@ export function verifyNexiWebhook(payload: NexiWebhookPayload): boolean {
 }
 
 /**
- * Esegue un rimborso tramite API Nexi
- * Nota: i rimborsi in XPay si fanno tramite API separata o back office
+ * Esegue uno storno/rimborso tramite API Nexi XPay
+ * 
+ * Documentazione: ecomm/api/bo/storna
+ * - Se autorizzato → Storno Online (annullamento)
+ * - Se in attesa contabilizzazione → Storno Contabile
+ * - Se contabilizzato → Rimborso (riaccredito)
+ * 
+ * @param codiceTransazione - Il codTrans originale del pagamento (NON il codAut!)
+ * @param amount - Importo da stornare in EURO
  */
 export async function createNexiRefund(params: {
-  operationId: string;
+  codiceTransazione: string;  // Il codTrans usato nel pagamento originale
   amount: number;
   description?: string;
-}): Promise<{ operationId: string; result: string }> {
-  // Per XPay classico, i rimborsi si gestiscono tramite:
-  // 1. Back office manuale
-  // 2. API di contabilizzazione/storno
+}): Promise<{ idOperazione: string; result: string }> {
   
-  // Endpoint per storno: /ecomm/api/bo/storna
   const importoInCentesimi = Math.round(params.amount * 100).toString();
+  const timeStamp = Date.now().toString();
+  
+  // Calcola MAC per lo storno
+  // Formula: SHA1(apiKey=<alias>codiceTransazione=<val>divisa=978importo=<val>timeStamp=<val><chiaveSegreta>)
+  const macString = `apiKey=${nexiConfig.terminalId}codiceTransazione=${params.codiceTransazione}divisa=978importo=${importoInCentesimi}timeStamp=${timeStamp}${nexiConfig.apiKey}`;
+  const mac = createHash('sha1').update(macString, 'utf8').digest('hex');
+  
+  console.log('[Nexi] Refund MAC string:', macString.replace(nexiConfig.apiKey, '***SECRET***'));
   
   const requestBody = {
-    apiKey: nexiConfig.apiKey,
-    codTrans: params.operationId,
+    apiKey: nexiConfig.terminalId,  // Alias del terminale (NON la chiave segreta!)
+    codiceTransazione: params.codiceTransazione,
     importo: importoInCentesimi,
-    divisa: 'EUR',
+    divisa: '978',  // Codice ISO numerico per EUR
+    timeStamp: timeStamp,
+    mac: mac,
   };
   
   console.log('[Nexi] Refund request:', {
-    codTrans: params.operationId,
+    apiKey: nexiConfig.terminalId,
+    codiceTransazione: params.codiceTransazione,
     importo: importoInCentesimi,
+    divisa: '978',
+    timeStamp: timeStamp,
   });
   
   const response = await fetch(`${nexiConfig.baseUrl}/ecomm/api/bo/storna`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     },
     body: JSON.stringify(requestBody),
   });
   
+  const responseText = await response.text();
+  console.log('[Nexi] Refund response status:', response.status);
+  console.log('[Nexi] Refund response body:', responseText);
+  
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[Nexi] Refund error:', errorText);
-    throw new Error(`Nexi refund error: ${response.status} - ${errorText}`);
+    console.error('[Nexi] Refund HTTP error:', response.status, responseText);
+    throw new Error(`Nexi refund error: ${response.status} - ${responseText}`);
   }
   
-  const data = await response.json();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    throw new Error(`Nexi refund: invalid JSON response - ${responseText}`);
+  }
   
+  // Verifica esito
   if (data.esito !== 'OK') {
-    throw new Error(`Nexi refund failed: ${data.messaggio || data.esito}`);
+    const errorMsg = data.errore?.messaggio || data.messaggio || data.esito;
+    console.error('[Nexi] Refund failed:', data);
+    throw new Error(`Nexi refund failed: ${errorMsg}`);
   }
+  
+  console.log('[Nexi] Refund successful:', {
+    idOperazione: data.idOperazione,
+    esito: data.esito,
+  });
   
   return {
-    operationId: params.operationId,
+    idOperazione: data.idOperazione,
     result: data.esito,
   };
 }

@@ -76,29 +76,45 @@ export async function POST(request: Request) {
     // Converti external_id in codTrans per trovare la prenotazione
     const nexiCodTrans = toNexiCodTrans(external_id);
 
-    // Verifica MAC se disponibile
-    if (mac && data && orario && importo && divisa) {
-      const expectedMAC = calculateExpectedMAC(
-        nexiCodTrans,
-        esito || 'OK',
-        importo,
-        divisa,
-        data,
-        orario,
-        codAut || ''
-      );
-      
-      if (mac.toLowerCase() !== expectedMAC.toLowerCase()) {
-        console.warn('[Nexi Confirm] MAC verification failed:', {
-          received: mac,
-          expected: expectedMAC,
-        });
-        // In test potremmo procedere comunque, in produzione rifiutare
-        // return Response.json({ error: 'Invalid MAC' }, { status: 401 });
-      } else {
-        console.log('[Nexi Confirm] MAC verified successfully');
-      }
+    // =========================================================================
+    // VERIFICA MAC - OBBLIGATORIA PER SICUREZZA
+    // Il MAC è una firma digitale che garantisce che i dati provengano da Nexi
+    // e non siano stati manipolati. Senza questa verifica, un attaccante
+    // potrebbe falsificare i parametri e far risultare pagata una prenotazione.
+    // =========================================================================
+    
+    if (!mac || !data || !orario || !importo || !divisa) {
+      console.error('[Nexi Confirm] Missing required params for MAC verification:', {
+        hasMac: !!mac,
+        hasData: !!data,
+        hasOrario: !!orario,
+        hasImporto: !!importo,
+        hasDivisa: !!divisa,
+      });
+      return Response.json({ error: 'Missing security parameters' }, { status: 400 });
     }
+
+    const expectedMAC = calculateExpectedMAC(
+      nexiCodTrans,
+      esito || 'OK',
+      importo,
+      divisa,
+      data,
+      orario,
+      codAut || ''
+    );
+
+    if (mac.toLowerCase() !== expectedMAC.toLowerCase()) {
+      console.error('[Nexi Confirm] MAC verification FAILED - possible tampering attempt:', {
+        external_id,
+        received_mac: mac,
+        expected_mac: expectedMAC,
+        params: { codTrans: nexiCodTrans, esito, importo, divisa, data, orario, codAut }
+      });
+      return Response.json({ error: 'Invalid MAC signature - request rejected' }, { status: 401 });
+    }
+
+    console.log('[Nexi Confirm] MAC verified successfully for:', external_id);
 
     // Cerca la prenotazione per nexiOrderId (il codTrans troncato)
     const { data: bookingData, error: fetchError } = await supabase

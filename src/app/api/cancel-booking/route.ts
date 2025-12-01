@@ -306,13 +306,13 @@ export async function POST(request: Request) {
     }
 
     // Check: la prenotazione deve essere pagata e avere info di pagamento (Stripe O Nexi)
-    const hasPaymentInfo = booking.paymentIntentId || booking.nexiOperationId;
+    const hasPaymentInfo = booking.paymentIntentId || booking.nexiOrderId;
     if (!booking.isPaid || !hasPaymentInfo) {
        await sendAdminErrorEmail(
         "Tentativo cancellazione prenotazione non pagata o senza info pagamento",
         "N/A - Booking not paid/no payment info",
         booking,
-        { message: "Booking not paid or missing payment information", name: "PaymentValidationError", isPaid: booking.isPaid, paymentIntentId: booking.paymentIntentId, nexiOperationId: booking.nexiOperationId }
+        { message: "Booking not paid or missing payment information", name: "PaymentValidationError", isPaid: booking.isPaid, paymentIntentId: booking.paymentIntentId, nexiOrderId: booking.nexiOrderId }
       );
       return NextResponse.json(
         { error: 'Booking is not paid or missing payment information for refund processing' },
@@ -336,11 +336,11 @@ export async function POST(request: Request) {
     // ========================================================================
     // NEXI REFUND FLOW
     // ========================================================================
-    if (refundPercentage > 0 && booking.nexiOperationId) {
+    if (refundPercentage > 0 && booking.nexiOrderId) {
       try {
         refundAmount = booking.totalPrice! * refundPercentage;
         await createNexiRefund({
-          operationId: booking.nexiOperationId,
+          codiceTransazione: booking.nexiOrderId,  // Il codTrans usato nel pagamento
           amount: refundAmount,
           description: 'Refund - Cancellazione prenotazione'
         });

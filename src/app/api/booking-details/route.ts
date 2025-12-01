@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 import { calculateNumberOfNights } from '@/app/utils/dateUtils';
+import { PAYMENT_PROVIDER } from '@/lib/payment/config';
 
 // Define structure for bed info lookup
 interface BedInfo {
@@ -112,6 +113,7 @@ interface RawBasket {
     isCancelled: boolean;
     createdAt: string;
     stripeId: string;
+    nexiOrderId: string | null;
     isCreatedByAdmin: boolean;
     RoomReservation: RawRoomReservation[] | null;
 }
@@ -131,6 +133,7 @@ interface FormattedBookingDetails {
   isCancelled: boolean;
   createdAt: string;
   stripeId: string;
+  paymentId: string; // Valore dinamico: nexiOrderId o stripeId in base al provider
   isCreatedByAdmin: boolean;
   cityTaxTotal: number;
   totalPrivacyCost: number;
@@ -181,6 +184,7 @@ export async function GET(request: Request) {
         isCancelled,
         createdAt,
         stripeId,
+        nexiOrderId,
         isCreatedByAdmin,
         RoomReservation (
           id,
@@ -398,6 +402,11 @@ export async function GET(request: Request) {
 
 
     // Step 6: Format the final response
+    // Calcola paymentId in base al provider configurato
+    const paymentId = PAYMENT_PROVIDER === 'nexi'
+      ? (booking.nexiOrderId || 'N/A')
+      : (booking.stripeId || 'N/A');
+
     const formattedBooking: FormattedBookingDetails = {
       id: booking.id,
       external_id: booking.external_id, // Include external_id
@@ -412,7 +421,8 @@ export async function GET(request: Request) {
       isPaid: booking.isPaid,
       isCancelled: booking.isCancelled || false, // Ensure boolean
       createdAt: booking.createdAt,
-      stripeId: booking.stripeId || '', // Ensure string
+      stripeId: booking.stripeId || '', // Ensure string (mantenuto per retrocompatibilità)
+      paymentId: paymentId, // Valore dinamico in base al provider
       isCreatedByAdmin: booking.isCreatedByAdmin,
       cityTaxTotal: totalCityTax,
       totalPrivacyCost: totalPrivacyCostFromRR, // Using the summed cost from RRs

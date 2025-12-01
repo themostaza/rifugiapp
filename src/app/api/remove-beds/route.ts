@@ -372,7 +372,7 @@ export async function POST(request: Request) {
     } else {
       // Regular bookings: apply same refund logic as cancellation
       // Check: deve avere info pagamento (Stripe O Nexi)
-      const hasPaymentInfo = booking.paymentIntentId || booking.nexiOperationId;
+      const hasPaymentInfo = booking.paymentIntentId || booking.nexiOrderId;
       if (!booking.isPaid || !hasPaymentInfo) {
         await sendAdminErrorEmail(
           "Tentativo rimozione letti da prenotazione non pagata o senza info pagamento",
@@ -383,7 +383,7 @@ export async function POST(request: Request) {
             name: "PaymentValidationError", 
             isPaid: booking.isPaid, 
             paymentIntentId: booking.paymentIntentId,
-            nexiOperationId: booking.nexiOperationId
+            nexiOrderId: booking.nexiOrderId
           }
         );
         return NextResponse.json(
@@ -407,11 +407,11 @@ export async function POST(request: Request) {
       // ======================================================================
       // NEXI PARTIAL REFUND FLOW
       // ======================================================================
-      if (refundPercentage > 0 && booking.nexiOperationId) {
+      if (refundPercentage > 0 && booking.nexiOrderId) {
         try {
           refundAmount = totalBedAmount * refundPercentage;
           await createNexiRefund({
-            operationId: booking.nexiOperationId,
+            codiceTransazione: booking.nexiOrderId,  // Il codTrans usato nel pagamento
             amount: refundAmount,
             description: 'Partial refund - Rimozione letti'
           });

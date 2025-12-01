@@ -141,7 +141,7 @@
   "confirmation": {
     "bookingDetails": "Buchungsdetails",
     "bookingNumber": "Buchungsnummer",
-    "paymentId": "Zahlungs-ID (Stripe)",
+    "paymentId": "Zahlungs-ID",
     "guestName": "Name des Gastes",
     "email": "E-Mail",
     "phone": "Telefon",
@@ -218,7 +218,7 @@
     "subtitle": "Buchungsbestätigung",
     "details": "Buchungsdetails",
     "bookingNumber": "Buchungsnummer",
-    "paymentId": "Zahlungs-ID (Stripe)",
+    "paymentId": "Zahlungs-ID",
     "checkIn": "Anreise",
     "checkOut": "Abreise",
     "guestType": "Unterkunftsart",

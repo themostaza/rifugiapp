@@ -18,7 +18,7 @@ export interface RefundParams {
   // Stripe fields
   paymentIntentId?: string | null;
   // Nexi fields  
-  nexiOperationId?: string | null;
+  nexiOrderId?: string | null;  // Il codTrans usato nel pagamento originale
 }
 
 export interface RefundResult {
@@ -68,13 +68,13 @@ async function processStripeRefund(params: RefundParams): Promise<RefundResult> 
 // ============================================================================
 
 async function processNexiRefund(params: RefundParams): Promise<RefundResult> {
-  if (!params.nexiOperationId) {
-    return { success: false, provider: 'nexi', error: 'Missing nexiOperationId' };
+  if (!params.nexiOrderId) {
+    return { success: false, provider: 'nexi', error: 'Missing nexiOrderId (codiceTransazione)' };
   }
 
   try {
     const result = await createNexiRefund({
-      operationId: params.nexiOperationId,
+      codiceTransazione: params.nexiOrderId,  // Il codTrans usato nel pagamento
       amount: params.amount,
       description: params.reason || 'Refund requested by customer',
     });
@@ -82,7 +82,7 @@ async function processNexiRefund(params: RefundParams): Promise<RefundResult> {
     return {
       success: true,
       provider: 'nexi',
-      refundId: result.operationId,
+      refundId: result.idOperazione,
     };
   } catch (error) {
     console.error('[Refund] Nexi refund error:', error);
@@ -103,7 +103,7 @@ async function processNexiRefund(params: RefundParams): Promise<RefundResult> {
  * Determina automaticamente quale provider usare basandosi sui campi presenti.
  * 
  * Priorità:
- * 1. Se nexiOperationId è presente → usa Nexi
+ * 1. Se nexiOrderId è presente → usa Nexi
  * 2. Se paymentIntentId è presente → usa Stripe
  * 3. Altrimenti → nessun rimborso possibile
  */
@@ -111,12 +111,12 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
   console.log('[Refund] Processing refund:', {
     amount: params.amount,
     hasPaymentIntentId: !!params.paymentIntentId,
-    hasNexiOperationId: !!params.nexiOperationId,
+    hasNexiOrderId: !!params.nexiOrderId,
   });
 
   // Determina il provider basandosi sui campi presenti
   // Nexi ha priorità se entrambi sono presenti (caso improbabile ma gestiamolo)
-  if (params.nexiOperationId) {
+  if (params.nexiOrderId) {
     console.log('[Refund] Using Nexi provider');
     return processNexiRefund(params);
   }

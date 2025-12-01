@@ -141,7 +141,7 @@
   "confirmation": {
     "bookingDetails": "Dettagli della prenotazione",
     "bookingNumber": "Numero prenotazione",
-    "paymentId": "ID Pagamento (Stripe)",
+    "paymentId": "ID Pagamento",
     "guestName": "Nome ospite",
     "email": "Email",
     "phone": "Telefono",
@@ -218,7 +218,7 @@
     "subtitle": "Conferma Prenotazione",
     "details": "Dettagli della prenotazione",
     "bookingNumber": "Numero prenotazione",
-    "paymentId": "ID Pagamento (Stripe)",
+    "paymentId": "ID Pagamento",
     "checkIn": "Check-in",
     "checkOut": "Check-out",
     "guestType": "Tipo Pernottamento",
