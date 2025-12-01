@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { sendPaymentSuccessEmail } from '@/utils/emailService';
+import { sendPaymentSuccessEmail, sendPaymentFailedEmail } from '@/utils/emailService';
 import { toNexiCodTrans } from '@/lib/payment/nexi-client';
 import { createHash } from 'crypto';
 import { nexiConfig } from '@/lib/payment/config';
@@ -71,6 +71,13 @@ export async function POST(request: Request) {
     if (esito === 'KO' || (codiceEsito && codiceEsito !== '0')) {
       console.log('[Nexi Confirm] Payment DECLINED:', { esito, codiceEsito, messaggio });
       
+      // Fetch booking data to get user email before cancelling
+      const { data: declinedBookingData } = await supabase
+        .from('Basket')
+        .select('mail, name, dayFrom, dayTo')
+        .eq('external_id', external_id)
+        .single();
+
       // Cancella la prenotazione
       const { error: cancelError } = await supabase
         .from('Basket')
@@ -86,6 +93,18 @@ export async function POST(request: Request) {
         console.error('[Nexi Confirm] Error cancelling declined booking:', cancelError);
       } else {
         console.log('[Nexi Confirm] Booking cancelled due to payment decline:', external_id);
+      }
+
+      // Send payment failed email to user
+      const declinedEmailTo = mail || declinedBookingData?.mail;
+      if (declinedEmailTo) {
+        const guestName = (nome && cognome) ? `${nome} ${cognome}`.trim() : declinedBookingData?.name;
+        await sendPaymentFailedEmail(declinedEmailTo, {
+          name: guestName,
+          checkIn: declinedBookingData?.dayFrom,
+          checkOut: declinedBookingData?.dayTo,
+          errorMessage: messaggio || 'Pagamento rifiutato dalla banca'
+        });
       }
 
       return Response.json({ 

@@ -81,4 +81,138 @@ export async function sendPaymentSuccessEmail(
     console.error(`Exception while sending payment success email to ${to} via ${sendEmailApiPath}:`, emailError);
     return false;
   }
+}
+
+// Helper function to send email when payment fails/is declined
+export async function sendPaymentFailedEmail(
+  to: string,
+  bookingDetails: {
+    name?: string;
+    checkIn?: string;
+    checkOut?: string;
+    errorMessage?: string;
+  }
+) {
+  const subject = 'Pagamento Non Riuscito - Rifugio Di Bona';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.rifugiodibona.com';
+  
+  const dateInfo = bookingDetails.checkIn && bookingDetails.checkOut
+    ? `<p><strong>Date richieste:</strong></p>
+       <ul>
+         <li>Check-in: ${new Date(bookingDetails.checkIn).toLocaleDateString('it-IT')}</li>
+         <li>Check-out: ${new Date(bookingDetails.checkOut).toLocaleDateString('it-IT')}</li>
+       </ul>`
+    : '';
+
+  const htmlBody = `
+    <h1>Pagamento Non Riuscito</h1>
+    <p>Ciao ${bookingDetails.name || 'Ospite'},</p>
+    <p>Purtroppo il pagamento per la tua prenotazione presso il Rifugio Di Bona <strong>non è andato a buon fine</strong>.</p>
+    ${bookingDetails.errorMessage ? `<p><em>Motivo: ${bookingDetails.errorMessage}</em></p>` : ''}
+    ${dateInfo}
+    <p>La prenotazione non è stata confermata e i posti sono stati rilasciati.</p>
+    <h3>Cosa puoi fare:</h3>
+    <ul>
+      <li>Verifica i dati della tua carta di credito</li>
+      <li>Assicurati che il limite di spesa sia sufficiente</li>
+      <li>Prova con un altro metodo di pagamento</li>
+      <li>Contattaci se il problema persiste</li>
+    </ul>
+    <p>Puoi effettuare una nuova prenotazione visitando il nostro sito:</p>
+    <p><a href="${baseUrl}">${baseUrl}</a></p>
+    <p>Se hai bisogno di assistenza, non esitare a contattarci.</p>
+    <p>Cordiali saluti,<br>Il Team del Rifugio Di Bona</p>
+  `;
+  const plainTextBody = htmlToPlainText(htmlBody);
+
+  const sendEmailApiPath = '/api/send-email';
+  try {
+    const fetchUrl = process.env.NEXT_PUBLIC_BASE_URL 
+      ? `${process.env.NEXT_PUBLIC_BASE_URL}${sendEmailApiPath}` 
+      : sendEmailApiPath;
+
+    console.log('[emailService:sendPaymentFailedEmail] Sending to:', to);
+
+    const emailPayload = { to, subject, html: htmlBody, text: plainTextBody };
+    const emailResponse = await fetch(fetchUrl, { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(emailPayload) 
+    });
+
+    if (!emailResponse.ok) {
+      const errorBodyText = await emailResponse.text();
+      console.error(`Failed to send payment failed email to ${to}. Status: ${emailResponse.status}. Body: ${errorBodyText}`);
+      return false;
+    }
+    console.log(`Payment failed email sent successfully to ${to}`);
+    return true;
+  } catch (emailError) {
+    console.error(`Exception while sending payment failed email to ${to}:`, emailError);
+    return false;
+  }
+}
+
+// Helper function to send email when booking expires (payment timeout)
+export async function sendBookingExpiredEmail(
+  to: string,
+  bookingDetails: {
+    name?: string;
+    checkIn?: string;
+    checkOut?: string;
+    external_id?: string;
+  }
+) {
+  const subject = 'Prenotazione Scaduta - Rifugio Di Bona';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.rifugiodibona.com';
+  
+  const dateInfo = bookingDetails.checkIn && bookingDetails.checkOut
+    ? `<p><strong>Date richieste:</strong></p>
+       <ul>
+         <li>Check-in: ${new Date(bookingDetails.checkIn).toLocaleDateString('it-IT')}</li>
+         <li>Check-out: ${new Date(bookingDetails.checkOut).toLocaleDateString('it-IT')}</li>
+       </ul>`
+    : '';
+
+  const htmlBody = `
+    <h1>Prenotazione Scaduta</h1>
+    <p>Ciao ${bookingDetails.name || 'Ospite'},</p>
+    <p>La tua prenotazione presso il Rifugio Di Bona è <strong>scaduta</strong> perché il pagamento non è stato completato entro il tempo previsto (30 minuti).</p>
+    ${dateInfo}
+    <p>I posti che avevi selezionato sono stati rilasciati e potrebbero non essere più disponibili.</p>
+    <h3>Vuoi prenotare di nuovo?</h3>
+    <p>Puoi effettuare una nuova prenotazione visitando il nostro sito:</p>
+    <p><a href="${baseUrl}">${baseUrl}</a></p>
+    <p>Ti consigliamo di completare il pagamento entro pochi minuti dalla selezione dei posti per assicurarti la disponibilità.</p>
+    <p>Se hai avuto problemi durante il processo di prenotazione o pagamento, non esitare a contattarci.</p>
+    <p>Cordiali saluti,<br>Il Team del Rifugio Di Bona</p>
+  `;
+  const plainTextBody = htmlToPlainText(htmlBody);
+
+  const sendEmailApiPath = '/api/send-email';
+  try {
+    const fetchUrl = process.env.NEXT_PUBLIC_BASE_URL 
+      ? `${process.env.NEXT_PUBLIC_BASE_URL}${sendEmailApiPath}` 
+      : sendEmailApiPath;
+
+    console.log('[emailService:sendBookingExpiredEmail] Sending to:', to);
+
+    const emailPayload = { to, subject, html: htmlBody, text: plainTextBody };
+    const emailResponse = await fetch(fetchUrl, { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(emailPayload) 
+    });
+
+    if (!emailResponse.ok) {
+      const errorBodyText = await emailResponse.text();
+      console.error(`Failed to send booking expired email to ${to}. Status: ${emailResponse.status}. Body: ${errorBodyText}`);
+      return false;
+    }
+    console.log(`Booking expired email sent successfully to ${to}`);
+    return true;
+  } catch (emailError) {
+    console.error(`Exception while sending booking expired email to ${to}:`, emailError);
+    return false;
+  }
 } 

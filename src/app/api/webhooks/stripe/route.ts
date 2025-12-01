@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { supabase } from '@/lib/supabase';
 import Stripe from 'stripe';
-import { sendPaymentSuccessEmail } from '@/utils/emailService';
+import { sendPaymentSuccessEmail, sendPaymentFailedEmail, sendBookingExpiredEmail } from '@/utils/emailService';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia'
@@ -184,6 +184,17 @@ export async function POST(request: Request) {
         if (expireError) {
           console.error(`Error updating booking ${bookingId} to expired:`, expireError);
         }
+
+        // Send booking expired email to user
+        const expiredEmailTo = session.customer_details?.email || bookingData.mail;
+        if (expiredEmailTo) {
+          await sendBookingExpiredEmail(expiredEmailTo, {
+            name: session.customer_details?.name || bookingData.name,
+            checkIn: bookingData.dayFrom,
+            checkOut: bookingData.dayTo,
+            external_id: bookingId
+          });
+        }
         break;
 
       case 'checkout.session.async_payment_failed':
@@ -200,6 +211,17 @@ export async function POST(request: Request) {
 
         if (failError) {
           console.error(`Error updating booking ${bookingId} to payment failed:`, failError);
+        }
+
+        // Send payment failed email to user
+        const failedEmailTo = session.customer_details?.email || bookingData.mail;
+        if (failedEmailTo) {
+          await sendPaymentFailedEmail(failedEmailTo, {
+            name: session.customer_details?.name || bookingData.name,
+            checkIn: bookingData.dayFrom,
+            checkOut: bookingData.dayTo,
+            errorMessage: 'Il pagamento non è andato a buon fine'
+          });
         }
         break;
 

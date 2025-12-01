@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { sendBookingExpiredEmail } from '@/utils/emailService';
 
 // Configurazione
 const EXPIRATION_MINUTES = 30;
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
     // Trova le prenotazioni pending scadute
     const { data: expiredBookings, error: fetchError } = await supabase
       .from('Basket')
-      .select('id, external_id, name, mail, createdAt, totalPrice')
+      .select('id, external_id, name, mail, createdAt, totalPrice, dayFrom, dayTo')
       .eq('isPaid', false)
       .eq('isCreatedByAdmin', false)
       .eq('isCancelled', false)
@@ -98,11 +99,31 @@ export async function GET(request: Request) {
 
     console.log(`[Cleanup Cron] Successfully cancelled ${expiredBookings.length} expired bookings`);
 
+    // Send expiration emails to users
+    const emailResults = await Promise.allSettled(
+      expiredBookings
+        .filter(booking => booking.mail) // Only send to bookings with email
+        .map(booking => 
+          sendBookingExpiredEmail(booking.mail!, {
+            name: booking.name,
+            checkIn: booking.dayFrom,
+            checkOut: booking.dayTo,
+            external_id: booking.external_id
+          })
+        )
+    );
+
+    const emailsSent = emailResults.filter(r => r.status === 'fulfilled' && r.value === true).length;
+    const emailsFailed = emailResults.length - emailsSent;
+    console.log(`[Cleanup Cron] Sent ${emailsSent} expiration emails (${emailsFailed} failed)`);
+
     // Restituisci un riepilogo
     return NextResponse.json({ 
       success: true, 
       message: `Cancelled ${expiredBookings.length} expired pending bookings`,
       count: expiredBookings.length,
+      emailsSent,
+      emailsFailed,
       cancelledBookings: expiredBookings.map(b => ({
         id: b.id,
         external_id: b.external_id,
