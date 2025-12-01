@@ -5,6 +5,9 @@
     },
     "src/app/api/stripe-sync/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/cron/cleanup-expired-bookings/route.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [
@@ -15,6 +18,10 @@
     {
       "path": "/api/stripe-sync",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-expired-bookings",
+      "schedule": "*/15 * * * *"
     }
   ]
 } 

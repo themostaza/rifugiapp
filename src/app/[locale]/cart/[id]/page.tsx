@@ -98,6 +98,10 @@ export default function ConfirmationPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [nexiConfirmationProcessed, setNexiConfirmationProcessed] = useState(false);
   
+  // Payment declined state
+  const [showPaymentDeclinedDialog, setShowPaymentDeclinedDialog] = useState(false);
+  const [paymentDeclinedMessage, setPaymentDeclinedMessage] = useState('');
+  
   // Bed removal states
   const [showBedRemovalDialog, setShowBedRemovalDialog] = useState(false);
   const [selectedBedsToRemove, setSelectedBedsToRemove] = useState<number[]>([]);
@@ -154,26 +158,24 @@ export default function ConfirmationPage() {
   useEffect(() => {
     const confirmNexiPayment = async () => {
       // Controlla se ci sono parametri Nexi nel redirect
-      const esito = searchParams.get('esito') || (searchParams.get('codiceEsito') === '0' ? 'OK' : null);
+      const esito = searchParams.get('esito');
       const codiceEsito = searchParams.get('codiceEsito');
       const paymentStatus = searchParams.get('payment_status');
+      const messaggio = searchParams.get('messaggio');
       
       // Se non ci sono parametri Nexi o già processato, skip
       if (nexiConfirmationProcessed) return;
       if (!esito && !codiceEsito && paymentStatus !== 'success') return;
       
-      // Verifica se è un esito Nexi positivo
-      const isNexiSuccess = esito === 'OK' || codiceEsito === '0';
-      if (!isNexiSuccess) return;
-
-      console.log('[Cart] Detected Nexi redirect params, confirming payment...');
+      console.log('[Cart] Detected Nexi redirect params:', { esito, codiceEsito, messaggio });
       setNexiConfirmationProcessed(true);
 
       try {
         const nexiParams = {
           external_id: bookingExternalId,
-          esito: searchParams.get('esito') || 'OK',
-          codiceEsito: searchParams.get('codiceEsito'),
+          esito: esito || (codiceEsito === '0' ? 'OK' : 'KO'),
+          codiceEsito: codiceEsito,
+          messaggio: messaggio,
           codAut: searchParams.get('codAut'),
           importo: searchParams.get('importo'),
           divisa: searchParams.get('divisa'),
@@ -195,6 +197,12 @@ export default function ConfirmationPage() {
 
         const result = await response.json();
         console.log('[Cart] Nexi payment confirmation result:', result);
+        
+        // Se il pagamento è stato rifiutato, mostra il dialog
+        if (result.paymentDeclined) {
+          setPaymentDeclinedMessage(result.message || 'Il pagamento non è andato a buon fine.');
+          setShowPaymentDeclinedDialog(true);
+        }
         
         // Pulisci l'URL dai parametri Nexi dopo la conferma
         if (typeof window !== 'undefined') {
@@ -1136,6 +1144,34 @@ export default function ConfirmationPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Payment Declined Dialog */}
+      <AlertDialog open={showPaymentDeclinedDialog} onOpenChange={setShowPaymentDeclinedDialog}>
+        <AlertDialogContent className="w-[90%] sm:w-full max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-700 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              {translations.paymentDeclined || 'Pagamento non riuscito'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>{translations.paymentDeclinedMessage || 'Il servizio di pagamento ci comunica che la transazione non è andata a buon fine.'}</p>
+              <p className="font-medium text-gray-700">{paymentDeclinedMessage}</p>
+              <p>{translations.paymentDeclinedRetry || 'La prenotazione è stata annullata. Puoi tornare alla home per effettuare una nuova prenotazione.'}</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowPaymentDeclinedDialog(false);
+                window.location.href = '/';
+              }} 
+              className="bg-gray-900 hover:bg-gray-700"
+            >
+              {translations.backToHome || 'Torna alla home'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Refund Information Dialog */}
       <AlertDialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>

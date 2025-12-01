@@ -14,6 +14,7 @@ import { nexiConfig } from '@/lib/payment/config';
 interface NexiRedirectParams {
   esito?: string;
   codiceEsito?: string;
+  messaggio?: string;
   codAut?: string;
   importo?: string;
   divisa?: string;
@@ -48,12 +49,13 @@ export async function POST(request: Request) {
   try {
     const body: NexiRedirectParams & { external_id: string } = await request.json();
     
-    const { external_id, esito, codiceEsito, codAut, importo, divisa, data, orario, mac, brand, mail, nome, cognome } = body;
+    const { external_id, esito, codiceEsito, messaggio, codAut, importo, divisa, data, orario, mac, brand, mail, nome, cognome } = body;
 
     console.log('[Nexi Confirm] Received params:', {
       external_id,
       esito,
       codiceEsito,
+      messaggio,
       codAut,
       importo,
     });
@@ -62,12 +64,34 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Missing external_id' }, { status: 400 });
     }
 
-    // Verifica che l'esito sia OK
-    if (esito !== 'OK' && codiceEsito !== '0') {
-      console.log('[Nexi Confirm] Payment not successful:', esito, codiceEsito);
+    // =========================================================================
+    // GESTIONE ESITO NEGATIVO (KO)
+    // Se il pagamento è stato rifiutato, cancelliamo la prenotazione
+    // =========================================================================
+    if (esito === 'KO' || (codiceEsito && codiceEsito !== '0')) {
+      console.log('[Nexi Confirm] Payment DECLINED:', { esito, codiceEsito, messaggio });
+      
+      // Cancella la prenotazione
+      const { error: cancelError } = await supabase
+        .from('Basket')
+        .update({ 
+          isCancelled: true, 
+          cancellationReason: `payment_declined: ${messaggio || esito || 'Unknown error'}`,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('external_id', external_id)
+        .eq('isPaid', false); // Solo se non già pagata (sicurezza)
+
+      if (cancelError) {
+        console.error('[Nexi Confirm] Error cancelling declined booking:', cancelError);
+      } else {
+        console.log('[Nexi Confirm] Booking cancelled due to payment decline:', external_id);
+      }
+
       return Response.json({ 
         success: false, 
-        message: 'Payment not successful',
+        paymentDeclined: true,
+        message: messaggio || 'Pagamento rifiutato',
         esito,
         codiceEsito 
       });
