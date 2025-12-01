@@ -1159,13 +1159,19 @@ export default function ConfirmationPage() {
               <p>{translations.paymentDeclinedRetry || 'La prenotazione è stata annullata. Puoi tornare alla home per effettuare una nuova prenotazione.'}</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel 
+              onClick={() => setShowPaymentDeclinedDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              {translations.understand || 'Ho capito'}
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => {
                 setShowPaymentDeclinedDialog(false);
                 window.location.href = '/';
               }} 
-              className="bg-gray-900 hover:bg-gray-700"
+              className="bg-gray-900 hover:bg-gray-700 w-full sm:w-auto"
             >
               {translations.backToHome || 'Torna alla home'}
             </AlertDialogAction>
