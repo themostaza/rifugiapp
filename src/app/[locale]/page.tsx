@@ -27,7 +27,7 @@ import enMessages from '../../../messages/en.json';
 import frMessages from '../../../messages/fr.json';
 import deMessages from '../../../messages/de.json';
 import esMessages from '../../../messages/es.json';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 
 // Types
@@ -349,8 +349,10 @@ export default function BookingPage() {
   const searchDatesRef = useRef<{ checkIn?: Date, checkOut?: Date }>({});
   const [isSearching, setIsSearching] = useState(false);
   const [isAdminBooking, setIsAdminBooking] = useState(false);
+  const [nexiCancelProcessed, setNexiCancelProcessed] = useState(false);
 
   const today = useMemo(() => new Date(), []);
+  const searchParams = useSearchParams();
 
   const pathname = usePathname();
   // Estrai la lingua dal path, fallback a 'it'
@@ -360,6 +362,53 @@ export default function BookingPage() {
   useEffect(() => {
     setLanguage(detectedLang);
   }, [detectedLang]);
+
+  // Gestione annullamento checkout Nexi (esito=ANNULLO)
+  useEffect(() => {
+    const handleNexiCancel = async () => {
+      const esito = searchParams.get('esito');
+      const codTrans = searchParams.get('codTrans');
+      
+      // Solo se esito è ANNULLO e non già processato
+      if (esito !== 'ANNULLO' || nexiCancelProcessed || !codTrans) return;
+      
+      console.log('[Home] Detected Nexi checkout cancellation, codTrans:', codTrans);
+      setNexiCancelProcessed(true);
+      
+      try {
+        // Chiama API per cancellare la prenotazione
+        const response = await fetch('/api/cancel-nexi-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codTrans }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log('[Home] Booking cancelled due to checkout abort:', codTrans);
+        } else {
+          console.error('[Home] Failed to cancel booking:', data.error);
+        }
+      } catch (err) {
+        console.error('[Home] Error cancelling booking after Nexi abort:', err);
+      }
+      
+      // Pulisci URL dai parametri Nexi
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('step');
+        url.searchParams.delete('alias');
+        url.searchParams.delete('codTrans');
+        url.searchParams.delete('importo');
+        url.searchParams.delete('divisa');
+        url.searchParams.delete('esito');
+        window.history.replaceState({}, '', url.pathname);
+      }
+    };
+    
+    handleNexiCancel();
+  }, [searchParams, nexiCancelProcessed]);
 
   const messages = useMemo(() => getMessages(language), [language]);
   const t = useCallback((key: string, vars?: Record<string, unknown>): string => {
