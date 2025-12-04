@@ -754,3 +754,4 @@ Le prenotazioni usano soft delete tramite `isCancelled = true` invece di elimina
 
 Tutte le date sono salvate in formato ISO 8601 UTC. La conversione a timezone locale avviene nel frontend.
 
+

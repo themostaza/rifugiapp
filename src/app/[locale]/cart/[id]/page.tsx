@@ -163,6 +163,10 @@ export default function ConfirmationPage() {
       const paymentStatus = searchParams.get('payment_status');
       const messaggio = searchParams.get('messaggio');
       
+      // Se è una prenotazione admin, non tentare la conferma Nexi (admin non paga)
+      const isAdminBooking = searchParams.get('admin_booking') === 'true';
+      if (isAdminBooking) return;
+      
       // Se non ci sono parametri Nexi o già processato, skip
       if (nexiConfirmationProcessed) return;
       if (!esito && !codiceEsito && paymentStatus !== 'success') return;

@@ -388,8 +388,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
       const { bookingId } = await response.json();
       
-      // Redirect to confirmation page directly
-      window.location.href = `/cart/${bookingId}?payment_status=success&admin_booking=true`;
+      // Redirect to confirmation page directly (no payment_status for admin, they don't pay)
+      window.location.href = `/cart/${bookingId}?admin_booking=true`;
       
     } catch (error) {
       console.error('Admin booking error:', error);
