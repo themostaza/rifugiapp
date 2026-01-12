@@ -16,7 +16,7 @@ export interface GuestType {
   title: string;
   cityTax: boolean;
   cityTaxPrice: number;
-  langTrasn?: string;
+  langTrasn?: Record<string, string>[] | null;
 }
 
 export interface Bed {

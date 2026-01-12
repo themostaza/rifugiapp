@@ -142,7 +142,14 @@ function validateAndParseParams(searchParams: URLSearchParams): SearchParams {
     throw new Error('Missing required parameters');
   }
 
-  const guests = JSON.parse(guestsParam);
+  let guests;
+  try {
+    guests = JSON.parse(guestsParam);
+  } catch {
+    console.error('❌ Invalid JSON in guests parameter:', guestsParam);
+    throw new Error('Invalid guests JSON format');
+  }
+  
   if (!Array.isArray(guests)) {
     console.error('❌ Invalid guests format:', guests);
     throw new Error('Invalid guests parameter format');

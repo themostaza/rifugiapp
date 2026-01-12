@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { Calendar, ChevronDown, Users, Plus, Minus, Search, ShoppingCart, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -77,7 +77,7 @@ interface GuestType {
   title: string;
   cityTax: boolean;
   cityTaxPrice: number;
-  langTrasn?: string
+  langTrasn?: Record<string, string>[] | null;
 }
 
 interface SearchResponse {
@@ -320,7 +320,7 @@ const RoomList: React.FC<RoomListProps & { t: (key: string, vars?: Record<string
   );
 };
 
-export default function BookingPage() {
+function BookingPageContent() {
   const [checkIn, setCheckIn] = useState<Date>()
   const [checkOut, setCheckOut] = useState<Date>()
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -623,7 +623,7 @@ export default function BookingPage() {
       const data: SearchResponse = await response.json();
       console.log('🔎 Risposta API /api/search:', data, 'reason:', data?.reason);
 
-      if (data.guestTypes) {
+      if (data.guestTypes && Array.isArray(data.guestTypes)) {
         setGuestTypes(data.guestTypes);
       }
   
@@ -1134,4 +1134,24 @@ export default function BookingPage() {
       <Footer />
     </div>
   )
+}
+
+// Loading fallback per Suspense
+function BookingPageLoading() {
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex-grow flex items-center justify-center">
+        <div className="animate-pulse text-gray-500">Caricamento...</div>
+      </div>
+    </div>
+  );
+}
+
+// Wrapper con Suspense per useSearchParams
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<BookingPageLoading />}>
+      <BookingPageContent />
+    </Suspense>
+  );
 }
