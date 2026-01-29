@@ -513,11 +513,8 @@ async function checkBedAvailability(params: SearchParams) {
                   return -1;
                 if (b.displayOrder !== null && b.displayOrder !== undefined)
                   return 1;
-                // Otherwise sort by createdAt (newest first) - fallback
-                return (
-                  new Date(b.createdAt || 0).getTime() -
-                  new Date(a.createdAt || 0).getTime()
-                );
+                // No other sorting criteria
+                return 0;
               })
               .map((img) => img.url)
           : [];
@@ -602,11 +599,8 @@ async function checkBedAvailability(params: SearchParams) {
                 return -1;
               if (b.displayOrder !== null && b.displayOrder !== undefined)
                 return 1;
-              // Otherwise sort by createdAt (newest first) - fallback
-              return (
-                new Date(b.createdAt || 0).getTime() -
-                new Date(a.createdAt || 0).getTime()
-              );
+              // No other sorting criteria
+              return 0;
             })
             .map((img) => img.url)
         : [];
