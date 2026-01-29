@@ -13,7 +13,7 @@ export interface Language {
 export interface LanguageTranslation {
   [key: string]: string; // Solo index signature per supportare chiavi dinamiche
 }
-  
+
 // Interfaccia per i letti
 export interface Bed {
   id: number;
@@ -25,7 +25,7 @@ export interface Bed {
   createdAt: string;
   updatedAt: string;
 }
-  
+
 // Interfaccia per le camere
 export interface Room {
   id: number;
@@ -49,7 +49,7 @@ export interface RoomLinkBed {
   Room?: Room;
   Bed?: Bed;
 }
-  
+
 // Interfaccia per gli edifici
 export interface Building {
   id: number;
@@ -58,7 +58,7 @@ export interface Building {
   createdAt: string;
   updatedAt: string;
 }
-  
+
 // Interfaccia per i servizi
 export interface Service {
   id: number;
@@ -69,7 +69,7 @@ export interface Service {
   createdAt: string;
   updatedAt: string;
 }
-  
+
 // Interfaccia per le divisioni degli ospiti
 export interface GuestDivision {
   id: number;
@@ -84,7 +84,7 @@ export interface GuestDivision {
   createdAt: string;
   updatedAt: string;
 }
-  
+
 // Interfaccia per i blocchi letto
 export interface BedBlock {
   id: number;
@@ -93,25 +93,48 @@ export interface BedBlock {
   createdAt: string;
   updatedAt: string;
 }
-  
+
 // Tipo per identificare il nome della tabella corrente
-export type EntityType = 'Bed' | 'Room' | 'BuildingRegistration' | 'Service' | 'GuestDivision' | 'BedBlock' | 'RoomLinkBed';
-  
+export type EntityType =
+  | "Bed"
+  | "Room"
+  | "BuildingRegistration"
+  | "Service"
+  | "GuestDivision"
+  | "BedBlock"
+  | "RoomLinkBed";
+
 // Tipi per form (opzionali, rendono il codice più pulito nei componenti)
-export type BedFormType = Omit<Bed, 'id' | 'createdAt' | 'updatedAt'>;
-export type RoomFormType = Omit<Room, 'id' | 'createdAt' | 'updatedAt'>;
-export type BuildingFormType = Omit<Building, 'id' | 'createdAt' | 'updatedAt'>;
-export type ServiceFormType = Omit<Service, 'id' | 'createdAt' | 'updatedAt'>;
-export type GuestDivisionFormType = Omit<GuestDivision, 'id' | 'createdAt' | 'updatedAt'>;
-export type BedBlockFormType = Omit<BedBlock, 'id' | 'createdAt' | 'updatedAt'>;
-export type RoomLinkBedFormType = Omit<RoomLinkBed, 'id' | 'createdAt' | 'updatedAt'>;
-  
+export type BedFormType = Omit<Bed, "id" | "createdAt" | "updatedAt">;
+export type RoomFormType = Omit<Room, "id" | "createdAt" | "updatedAt">;
+export type BuildingFormType = Omit<Building, "id" | "createdAt" | "updatedAt">;
+export type ServiceFormType = Omit<Service, "id" | "createdAt" | "updatedAt">;
+export type GuestDivisionFormType = Omit<
+  GuestDivision,
+  "id" | "createdAt" | "updatedAt"
+>;
+export type BedBlockFormType = Omit<BedBlock, "id" | "createdAt" | "updatedAt">;
+export type RoomLinkBedFormType = Omit<
+  RoomLinkBed,
+  "id" | "createdAt" | "updatedAt"
+>;
+
+// Interfaccia per le immagini delle stanze
+export interface RoomImage {
+  id: number;
+  url: string;
+  roomId: number;
+  displayOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Interfaccia per gli eventi del calendario
 export interface CalendarDay {
   date: string;
   isBlocked: boolean;
 }
-  
+
 // Interfaccia per le prenotazioni
 export interface Reservation {
   id: number;

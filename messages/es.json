@@ -36,22 +36,49 @@
     "childrenSubtitle": "2-12 años",
     "infantsLabel": "Bebés",
     "infantsSubtitle": "0-2 años",
+    "infantsInfo": "Si el bebé duerme con los padres está incluido en el precio. De lo contrario, marcarlo como Niño.",
     "calendar": {
       "today": "Hoy",
       "tomorrow": "Mañana",
-      "months": ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
-      "weekdays": ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+      "months": [
+        "Enero",
+        "Febrero",
+        "Marzo",
+        "Abril",
+        "Mayo",
+        "Junio",
+        "Julio",
+        "Agosto",
+        "Septiembre",
+        "Octubre",
+        "Noviembre",
+        "Diciembre"
+      ],
+      "weekdays": [
+        "Domingo",
+        "Lunes",
+        "Martes",
+        "Miércoles",
+        "Jueves",
+        "Viernes",
+        "Sábado"
+      ]
     },
     "guestSingular": "huésped",
     "guestPlural": "huéspedes",
     "step1": "Selecciona el tipo de alojamiento:",
     "step1_bb": "• <strong>Alojamiento y desayuno</strong>: incluye solo el desayuno",
     "step1_hb": "• <strong>Media pensión</strong>: incluye cena y desayuno",
-    "step2": "Selecciona una habitación.",
+    "step2": "Elige una habitación y haz clic en las camas a ocupar.",
     "selectTreatment": "Seleccionar tratamiento",
     "infoProceed": "Si esta solución es adecuada para ti, haz clic en el botón 'Proceder a la compra'.",
     "infoContact": "¿Preguntas? Puedes contactar con el gerente en el +39 0436 860294 / +39 333 143 4408 o enviando un correo a rifugiodibona@gmail.com.",
-    "instructions": "Rifugio Dibona informa:<br/>Para completar la reserva, asegúrate de seguir los 5 pasos indicados por los respectivos números.<br/>Si tienes dudas: visita la página de <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A</a>"
+    "instructions": "Rifugio Dibona informa:<br/>Para completar la reserva, asegúrate de seguir los 5 pasos indicados por los respectivos números.<br/>Si tienes dudas: visita la página de <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A</a>",
+    "pricingTitle": "Tarifas",
+    "pricingBB": "Alojamiento y Desayuno",
+    "pricingMP": "Media Pensión",
+    "pricingPerNight": "por noche",
+    "infantFreeInfo": "Los bebés que duermen con los padres están incluidos en el precio."
   },
   "room": {
     "bedMapTitle": "Mapa de camas",
@@ -84,6 +111,7 @@
     "quantityPlaceholder": "Cant.",
     "totalAdditionalServices": "Total servicios adicionales",
     "bookingSummary": "Resumen de la reserva:",
+    "confirmationEmailReminder": "Recuerda conservar el correo de confirmación recibido de rifugiodibona.app. Este es tu recibo oficial de la reserva.",
     "stay": "Estancia",
     "numGuests": "Núm. huéspedes",
     "accommodation": "Alojamiento",
@@ -275,5 +303,13 @@
     "noInfo": "No hay información disponible sobre las camas de esta habitación",
     "nightOf": "Noche del {date}",
     "nightIndex": "{current} de {total}"
+  },
+  "searchErrors": {
+    "noResultsTitle": "Lo sentimos, no hay resultados disponibles.",
+    "noResultsContact": "¿Necesitas ayuda? Contáctanos en el +39 0436 860294 / +39 333 143 4408 o enviando un correo a rifugiodibona@gmail.com",
+    "bookingInProgress": "Hay reservas en curso para estas fechas. Por favor, inténtalo de nuevo en unos minutos.",
+    "soldOut": "Lo sentimos, no hay habitaciones disponibles para las fechas seleccionadas.",
+    "tooLittleAvailability": "No hay suficientes camas disponibles para el número de huéspedes seleccionado.",
+    "genericError": "Se ha producido un error durante la búsqueda. Por favor, inténtalo de nuevo más tarde."
   }
-} 
+}

@@ -36,22 +36,49 @@
     "childrenSubtitle": "2-12 ans",
     "infantsLabel": "Bébés",
     "infantsSubtitle": "0-2 ans",
+    "infantsInfo": "Si le bébé dort avec les parents, c'est inclus dans le prix. Sinon, le marquer comme Enfant.",
     "calendar": {
       "today": "Aujourd'hui",
       "tomorrow": "Demain",
-      "months": ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
-      "weekdays": ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"]
+      "months": [
+        "Janvier",
+        "Février",
+        "Mars",
+        "Avril",
+        "Mai",
+        "Juin",
+        "Juillet",
+        "Août",
+        "Septembre",
+        "Octobre",
+        "Novembre",
+        "Décembre"
+      ],
+      "weekdays": [
+        "Dimanche",
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi"
+      ]
     },
     "guestSingular": "visiteur",
     "guestPlural": "visiteurs",
     "step1": "Sélectionnez le type d'hébergement :",
     "step1_bb": "• <strong>Nuit et Petit-déjeuner</strong> : inclut seulement le petit-déjeuner",
     "step1_hb": "• <strong>Demi-pension</strong> : inclut le dîner et le petit-déjeuner",
-    "step2": "Sélectionnez une chambre.",
+    "step2": "Choisissez une chambre et cliquez sur les lits à occuper.",
     "selectTreatment": "Sélectionner le traitement",
     "infoProceed": "Si cette solution vous convient, cliquez sur le bouton 'Procéder à l'achat'.",
     "infoContact": "Des questions ? Vous pouvez contacter le gérant au +39 0436 860294 / +39 333 143 4408 ou envoyer un email à rifugiodibona@gmail.com.",
-    "instructions": "Rifugio Dibona informe :<br/>Pour finaliser votre réservation, assurez-vous de suivre les 5 étapes indiquées par les numéros respectifs.<br/>En cas de doute : visitez la page <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A</a>"
+    "instructions": "Rifugio Dibona informe :<br/>Pour compléter votre réservation, assurez-vous de suivre les 5 étapes indiquées par les numéros respectifs.<br/>Si vous avez des doutes : visitez la page <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&R</a>",
+    "pricingTitle": "Tarifs",
+    "pricingBB": "Chambre & Petit-déjeuner",
+    "pricingMP": "Demi-pension",
+    "pricingPerNight": "par nuit",
+    "infantFreeInfo": "Les bébés dormant avec leurs parents sont inclus dans le prix."
   },
   "room": {
     "bedMapTitle": "Carte des lits",
@@ -84,6 +111,7 @@
     "quantityPlaceholder": "Qté",
     "totalAdditionalServices": "Total services supplémentaires",
     "bookingSummary": "Récapitulatif de la réservation :",
+    "confirmationEmailReminder": "N'oubliez pas de conserver l'e-mail de confirmation reçu de rifugiodibona.app. C'est votre reçu officiel de réservation.",
     "stay": "Séjour",
     "numGuests": "Nb. visiteurs",
     "accommodation": "Hébergement",
@@ -275,5 +303,13 @@
     "noInfo": "Aucune information disponible sur les lits de cette chambre",
     "nightOf": "Nuit du {date}",
     "nightIndex": "{current} sur {total}"
+  },
+  "searchErrors": {
+    "noResultsTitle": "Nous sommes désolés, aucun résultat disponible.",
+    "noResultsContact": "Besoin d'aide ? Contactez-nous au +39 0436 860294 / +39 333 143 4408 ou en envoyant un email à rifugiodibona@gmail.com",
+    "bookingInProgress": "Il y a des réservations en cours pour ces dates. Veuillez réessayer dans quelques minutes.",
+    "soldOut": "Nous sommes désolés, il n'y a pas de chambres disponibles pour les dates sélectionnées.",
+    "tooLittleAvailability": "Il n'y a pas assez de lits disponibles pour le nombre de clients sélectionné.",
+    "genericError": "Une erreur s'est produite lors de la recherche. Veuillez réessayer plus tard."
   }
-} 
+}

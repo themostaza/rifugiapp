@@ -1,14 +1,25 @@
-import React, { useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Info } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import BedMap from './bedMap'
-import BedBlocking from './bedblockingcomponent'
-import { calculateBedPrice } from '../utils/pricing'
+import React, { useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import BedMap from "./bedMap";
+import BedBlocking from "./bedblockingcomponent";
+import { calculateBedPrice } from "../utils/pricing";
 
 interface Guest {
-  type: 'adult' | 'child' | 'infant';
+  type: "adult" | "child" | "infant";
   roomId: number | null;
   bedId: string | null;
 }
@@ -40,16 +51,16 @@ interface RoomContentProps {
       bb: number;
       hb: number;
     };
-    allBeds?: Array<{ 
-      id: number; 
+    allBeds?: Array<{
+      id: number;
       name: string;
       pricing?: {
         bb: number;
         mp: number;
       };
     }>;
-    availableBedIds?: Array<{ 
-      id: number; 
+    availableBedIds?: Array<{
+      id: number;
       name: string;
       pricing?: {
         bb: number;
@@ -65,7 +76,7 @@ interface RoomContentProps {
   };
   assignedGuests: Guest[];
   onGuestAssignment: (guests: Guest[]) => void;
-  pensionType: 'bb' | 'hb';
+  pensionType: "bb" | "hb";
   availabilityByNight?: NightAvailability[];
   checkIn?: Date;
   checkOut?: Date;
@@ -80,21 +91,24 @@ interface RoomContentProps {
     cityTax: boolean;
     cityTaxPrice: number;
   }>;
-  onBlockedBedsChange?: (roomId: number, blockedBedsData: { [date: string]: number[] }) => void;
+  onBlockedBedsChange?: (
+    roomId: number,
+    blockedBedsData: { [date: string]: number[] },
+  ) => void;
   blockedBedsForRoom?: { [date: string]: number[] };
   t: (key: string, vars?: Record<string, unknown>) => string;
 }
 
 const ImageCarousel = ({ images }: { images: string[] }) => {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const nextImage = () => {
-    setCurrentIndex((prev) => (prev + 1) % images.length)
-  }
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  };
 
   const previousImage = () => {
-    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length)
-  }
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
 
   return (
     <div className="relative w-full h-96 bg-gray-100 rounded-lg overflow-hidden">
@@ -134,7 +148,7 @@ const ImageCarousel = ({ images }: { images: string[] }) => {
               <button
                 key={index}
                 className={`w-2 h-2 rounded-full ${
-                  index === currentIndex ? 'bg-white' : 'bg-white/50'
+                  index === currentIndex ? "bg-white" : "bg-white/50"
                 }`}
                 onClick={() => setCurrentIndex(index)}
               />
@@ -143,27 +157,27 @@ const ImageCarousel = ({ images }: { images: string[] }) => {
         </>
       )}
     </div>
-  )
-}
+  );
+};
 
-const BedSelection = ({ 
+const BedSelection = ({
   guestType,
   availableCount,
   onAddGuest,
   isDisabled,
-  t
-}: { 
-  guestType: 'adult' | 'child' | 'infant';
+  t,
+}: {
+  guestType: "adult" | "child" | "infant";
   availableCount: number;
   onAddGuest: () => void;
   isDisabled: boolean;
   t: (key: string, vars?: Record<string, unknown>) => string;
 }) => {
   const labels = {
-    adult: t('room.adultLabel'),
-    child: t('room.childLabel'),
-    infant: t('room.infantLabel')
-  }
+    adult: t("room.adultLabel"),
+    child: t("room.childLabel"),
+    infant: t("room.infantLabel"),
+  };
 
   return (
     <Button
@@ -173,11 +187,15 @@ const BedSelection = ({
       disabled={isDisabled || availableCount === 0}
     >
       <Plus className="h-4 w-4" />
-      {t('room.addGuestButton', { type: labels[guestType].toLowerCase() })}
-      {availableCount > 0 && <span className="text-sm text-gray-500">({t('room.availableBedsCount', { count: availableCount })})</span>}
+      {t("room.addGuestButton", { type: labels[guestType].toLowerCase() })}
+      {availableCount > 0 && (
+        <span className="text-sm text-gray-500">
+          ({t("room.availableBedsCount", { count: availableCount })})
+        </span>
+      )}
     </Button>
-  )
-}
+  );
+};
 
 const BedAssignment = ({
   guestType,
@@ -188,22 +206,22 @@ const BedAssignment = ({
   allBedsWithPricing,
   pensionType,
   guestTypes,
-  t
+  t,
 }: {
-  guestType: 'adult' | 'child' | 'infant';
+  guestType: "adult" | "child" | "infant";
   onBedSelect: (bedId: string) => void;
   onDelete: () => void;
   selectedBedId: string | null;
   availableBeds: string[];
-  allBedsWithPricing: Array<{ 
-    id: number; 
+  allBedsWithPricing: Array<{
+    id: number;
     name: string;
-    pricing?: { 
-      bb: number; 
-      mp: number; 
-    } 
+    pricing?: {
+      bb: number;
+      mp: number;
+    };
   }>;
-  pensionType: 'bb' | 'hb';
+  pensionType: "bb" | "hb";
   guestTypes?: Array<{
     id: number;
     description: string;
@@ -217,102 +235,85 @@ const BedAssignment = ({
   t: (key: string, vars?: Record<string, unknown>) => string;
 }) => {
   const labels = {
-    adult: t('room.adultLabel'),
-    child: t('room.childLabel'),
-    infant: t('room.infantLabel')
-  }
+    adult: t("room.adultLabel"),
+    child: t("room.childLabel"),
+    infant: t("room.infantLabel"),
+  };
 
   // Use the pricing utility function
   const getPriceDetails = () => {
-    if (!selectedBedId || !guestTypes) return { basePrice: 0, discountedPrice: 0, discount: 0 };
-    
-    const bed = allBedsWithPricing.find(bed => bed.id.toString() === selectedBedId);
-    if (!bed || !bed.pricing) return { basePrice: 0, discountedPrice: 0, discount: 0 };
-    
+    if (!selectedBedId || !guestTypes)
+      return { basePrice: 0, discountedPrice: 0, discount: 0 };
+
+    const bed = allBedsWithPricing.find(
+      (bed) => bed.id.toString() === selectedBedId,
+    );
+    if (!bed || !bed.pricing)
+      return { basePrice: 0, discountedPrice: 0, discount: 0 };
+
     // Convert the bed to the format expected by our utility
     const bedForCalculation = {
       id: bed.id,
       name: bed.name,
       pricing: {
         bb: bed.pricing.bb,
-        mp: bed.pricing.mp
-      }
+        mp: bed.pricing.mp,
+      },
     };
-    
+
     // Use our utility to calculate the price
     const { basePrice, discountedPrice, discount } = calculateBedPrice(
       bedForCalculation,
       guestType,
       pensionType,
       guestTypes,
-      1 // Just calculating for one night here for display purposes
+      1, // Just calculating for one night here for display purposes
     );
-    
+
     return { basePrice, discountedPrice, discount };
   };
-  
+
   const { basePrice, discountedPrice, discount } = getPriceDetails();
   const hasDiscount = discount > 0;
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 py-2">
       <span className="min-w-24">{labels[guestType]}</span>
-      <div className="flex items-center gap-2 w-full sm:w-auto">
-        
-        <Select value={selectedBedId || ''} onValueChange={onBedSelect}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder={t('room.selectBedPlaceholder')} />
-          </SelectTrigger>
-          <SelectContent>
-            {availableBeds.map((bedId) => {
-              const bed = allBedsWithPricing.find(b => b.id.toString() === bedId);
-              return (
-                <SelectItem key={bedId} value={bedId}>
-                  {bed ? bed.name : t('room.bedFallback', { id: bedId })}
-                </SelectItem>
+      <span className="w-full sm:w-48 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+        {selectedBedId
+          ? (() => {
+              const bed = allBedsWithPricing.find(
+                (b) => b.id.toString() === selectedBedId,
               );
-            })}
-          </SelectContent>
-        </Select>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          className="text-gray-500 hover:text-red-600 sm:hidden"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          className="text-gray-500 hover:text-red-600 hidden sm:block"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-      
+              return bed
+                ? bed.name
+                : t("room.bedFallback", { id: selectedBedId });
+            })()
+          : t("room.selectBedPlaceholder")}
+      </span>
+
       {selectedBedId && (
         <div className="flex flex-col w-full sm:w-auto">
           <span className="text-gray-700 font-medium">
-            €{discountedPrice.toFixed(2)} {t('room.perNight')}
+            €{discountedPrice.toFixed(2)} {t("room.perNight")}
           </span>
-          
+
           {hasDiscount && (
             <span className="text-sm text-green-600">
-              {t('room.discountLabel', { percent: (discount * 100).toFixed(0), base: basePrice.toFixed(2) })}
+              {t("room.discountLabel", {
+                percent: (discount * 100).toFixed(0),
+                base: basePrice.toFixed(2),
+              })}
             </span>
           )}
         </div>
       )}
-      
-      
     </div>
-  )
-}
+  );
+};
 
-const RoomContent = ({ 
-  room, 
+const RoomContent = ({
+  room,
   unassignedGuests,
   assignedGuests,
   onGuestAssignment,
@@ -324,40 +325,85 @@ const RoomContent = ({
   guestTypes,
   onBlockedBedsChange,
   blockedBedsForRoom = {},
-  t
+  t,
 }: RoomContentProps) => {
   // State per tracciare i letti bloccati dall'utente per migliorare la privacy
-  const allBedIds = room.availableBedIds?.map(bed => bed.id.toString()) || [];
-  
+  const allBedIds = room.availableBedIds?.map((bed) => bed.id.toString()) || [];
+
   // Get currently used bed IDs in this room
   const usedBedIds = assignedGuests
-    .filter(guest => guest.bedId)
-    .map(guest => guest.bedId);
+    .filter((guest) => guest.bedId)
+    .map((guest) => guest.bedId);
 
   // Ottieni tutti i letti bloccati per almeno una notte
   const blockedBedIds = Object.values(blockedBedsForRoom)
     .flat()
-    .map(id => id.toString());
+    .map((id) => id.toString());
 
   // Calcola availableBedIds escludendo sia quelli assegnati che quelli bloccati
   const availableBedIds = allBedIds.filter(
-    bedId => !usedBedIds.includes(bedId) && !blockedBedIds.includes(bedId)
+    (bedId) => !usedBedIds.includes(bedId) && !blockedBedIds.includes(bedId),
   );
 
-  const handleAddGuest = (guestType: 'adult' | 'child' | 'infant') => {
-    const newGuest: Guest = {
-      type: guestType,
-      roomId: room.id,
-      bedId: null
-    };
-    onGuestAssignment([...assignedGuests, newGuest]);
+  // Funzione per determinare automaticamente il tipo di ospite da assegnare
+  const getNextGuestType = (): "adult" | "child" | "infant" | null => {
+    if (unassignedGuests.adults > 0) return "adult";
+    if (unassignedGuests.children > 0) return "child";
+    if (unassignedGuests.infants > 0) return "infant";
+    return null;
+  };
+
+  // Gestisce il click su un letto
+  const handleBedClick = (bedId: number) => {
+    const bedIdStr = bedId.toString();
+
+    // Controlla se il letto è già assegnato
+    const existingGuestIndex = assignedGuests.findIndex(
+      (guest) => guest.bedId === bedIdStr,
+    );
+
+    if (existingGuestIndex !== -1) {
+      // Letto già assegnato - deseleziona
+      const updatedGuests = assignedGuests.filter(
+        (_, index) => index !== existingGuestIndex,
+      );
+      onGuestAssignment(updatedGuests);
+    } else {
+      // Letto disponibile - assegna al prossimo ospite
+      const guestType = getNextGuestType();
+      if (!guestType) return; // Nessun ospite da assegnare
+
+      const newGuest: Guest = {
+        type: guestType,
+        roomId: room.id,
+        bedId: bedIdStr,
+      };
+      onGuestAssignment([...assignedGuests, newGuest]);
+
+      // --- Sincronizza: se il letto era bloccato, rimuovilo dai blocchi ---
+      if (onBlockedBedsChange && blockedBedsForRoom) {
+        const updatedBlockedBeds = { ...blockedBedsForRoom };
+        let changed = false;
+        for (const date in updatedBlockedBeds) {
+          if (updatedBlockedBeds[date]?.includes(bedId)) {
+            updatedBlockedBeds[date] = updatedBlockedBeds[date].filter(
+              (id) => id !== bedId,
+            );
+            changed = true;
+          }
+        }
+        if (changed) {
+          onBlockedBedsChange(room.id, updatedBlockedBeds);
+        }
+      }
+    }
   };
 
   const handleBedSelect = (guestIndex: number, bedId: string) => {
     const updatedGuests = [...assignedGuests];
     updatedGuests[guestIndex] = {
       ...updatedGuests[guestIndex],
-      bedId: bedId.toString()
+      bedId: bedId.toString(),
     };
     onGuestAssignment(updatedGuests);
 
@@ -367,7 +413,9 @@ const RoomContent = ({
       let changed = false;
       for (const date in updatedBlockedBeds) {
         if (updatedBlockedBeds[date]?.includes(Number(bedId))) {
-          updatedBlockedBeds[date] = updatedBlockedBeds[date].filter(id => id !== Number(bedId));
+          updatedBlockedBeds[date] = updatedBlockedBeds[date].filter(
+            (id) => id !== Number(bedId),
+          );
           changed = true;
         }
       }
@@ -378,7 +426,9 @@ const RoomContent = ({
   };
 
   const handleDeleteGuest = (guestIndex: number) => {
-    const updatedGuests = assignedGuests.filter((_, index) => index !== guestIndex);
+    const updatedGuests = assignedGuests.filter(
+      (_, index) => index !== guestIndex,
+    );
     onGuestAssignment(updatedGuests);
   };
 
@@ -386,74 +436,28 @@ const RoomContent = ({
 
   return (
     <div className="space-y-6">
+      <ImageCarousel images={room.images} />
+
       {/* Mappa dei letti */}
       <div className="bg-white rounded-lg sm:border">
-          
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:mb-4 p-2 sm:p-4 gap-2">
-            <h3 className="text-lg font-medium">{t('room.bedMapTitle')}</h3>
-            
-            {availabilityByNight.length > 0 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2 w-full sm:w-auto">
-                      <Info className="h-4 w-4" />
-                      <span>{t('room.infoButton')}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p>
-                      {t('room.infoTooltip')}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-          
-          
-          
-          
-          <BedMap 
-            roomId={room.id} 
-            allBeds={room.allBeds || []} 
-            availableBeds={room.availableBedIds || []}
-            availabilityByNight={availabilityByNight}
-            t={t}
-          />
-        </div>
-      <ImageCarousel images={room.images} />
-      
-      <div className="space-y-4">
-        
-        
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-          <BedSelection 
-            guestType="adult"
-            availableCount={unassignedGuests.adults}
-            onAddGuest={() => handleAddGuest('adult')}
-            isDisabled={isRoomFull}
-            t={t}
-          />
-          <BedSelection 
-            guestType="child"
-            availableCount={unassignedGuests.children}
-            onAddGuest={() => handleAddGuest('child')}
-            isDisabled={isRoomFull}
-            t={t}
-          />
-          <BedSelection 
-            guestType="infant"
-            availableCount={unassignedGuests.infants}
-            onAddGuest={() => handleAddGuest('infant')}
-            isDisabled={isRoomFull}
-            t={t}
-          />
-        </div>
+        <BedMap
+          roomId={room.id}
+          allBeds={room.allBeds || []}
+          availableBeds={room.availableBedIds || []}
+          availabilityByNight={availabilityByNight}
+          t={t}
+          onBedClick={handleBedClick}
+          selectedBedIds={usedBedIds.filter((id): id is string => id !== null)}
+          blockedBedIds={blockedBedIds}
+        />
+      </div>
 
+      <div className="space-y-4">
         {assignedGuests.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-medium mb-2">{t('room.assignedGuestsTitle')}</h4>
+            <h4 className="font-medium mb-2">
+              {t("room.assignedGuestsTitle")}
+            </h4>
             <div className="space-y-3">
               {assignedGuests.map((guest, index) => (
                 <BedAssignment
@@ -462,7 +466,9 @@ const RoomContent = ({
                   selectedBedId={guest.bedId}
                   onBedSelect={(bedId) => handleBedSelect(index, bedId)}
                   onDelete={() => handleDeleteGuest(index)}
-                  availableBeds={availableBedIds.concat(guest.bedId ? [guest.bedId] : [])}
+                  availableBeds={availableBedIds.concat(
+                    guest.bedId ? [guest.bedId] : [],
+                  )}
                   allBedsWithPricing={room.availableBedIds || []}
                   pensionType={pensionType}
                   guestTypes={guestTypes}
@@ -475,7 +481,7 @@ const RoomContent = ({
 
         {/* Componente per il blocco dei letti */}
         <div className="bg-white rounded-lg border-0">
-          <BedBlocking 
+          <BedBlocking
             roomId={room.id}
             nightAvailability={availabilityByNight}
             selectedGuests={assignedGuests}
@@ -486,18 +492,15 @@ const RoomContent = ({
             t={t}
           />
         </div>
-
       </div>
 
       {isRoomFull && (
         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-          <p className="text-yellow-800">
-            {t('room.noMoreBedsWarning')}
-          </p>
+          <p className="text-yellow-800">{t("room.noMoreBedsWarning")}</p>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default RoomContent
+export default RoomContent;

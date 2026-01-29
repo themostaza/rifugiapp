@@ -36,22 +36,49 @@
     "childrenSubtitle": "2-12 Jahre",
     "infantsLabel": "Kleinkinder",
     "infantsSubtitle": "0-2 Jahre",
+    "infantsInfo": "Wenn das Kleinkind bei den Eltern schläft, ist es im Preis inbegriffen. Andernfalls als Kind markieren.",
     "calendar": {
       "today": "Heute",
       "tomorrow": "Morgen",
-      "months": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
-      "weekdays": ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
+      "months": [
+        "Januar",
+        "Februar",
+        "März",
+        "April",
+        "Mai",
+        "Juni",
+        "Juli",
+        "August",
+        "September",
+        "Oktober",
+        "November",
+        "Dezember"
+      ],
+      "weekdays": [
+        "Sonntag",
+        "Montag",
+        "Dienstag",
+        "Mittwoch",
+        "Donnerstag",
+        "Freitag",
+        "Samstag"
+      ]
     },
     "guestSingular": "Gast",
     "guestPlural": "Gäste",
     "step1": "Wählen Sie die Art der Unterkunft:",
     "step1_bb": "• <strong>Übernachtung mit Frühstück</strong>: beinhaltet nur Frühstück",
     "step1_hb": "• <strong>Halbpension</strong>: beinhaltet Abendessen und Frühstück",
-    "step2": "Wählen Sie ein Zimmer.",
+    "step2": "Wählen Sie ein Zimmer und klicken Sie auf die zu belegenden Betten.",
     "selectTreatment": "Behandlung auswählen",
     "infoProceed": "Wenn diese Lösung für Sie passt, klicken Sie auf die Schaltfläche 'Zum Checkout fortfahren'.",
     "infoContact": "Fragen? Sie können den Manager unter +39 0436 860294 / +39 333 143 4408 kontaktieren oder eine E-Mail an rifugiodibona@gmail.com senden.",
-    "instructions": "Rifugio Dibona informiert:<br/>Um die Buchung abzuschließen, folgen Sie bitte den 5 Schritten, die durch die jeweiligen Nummern angezeigt werden.<br/>Bei Fragen besuchen Sie die <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&amp;A-Seite</a>"
+    "instructions": "Rifugio Dibona informiert:<br/>Um Ihre Buchung abzuschließen, befolgen Sie bitte die 5 Schritte, die durch die jeweiligen Nummern angezeigt werden.<br/>Bei Fragen: besuchen Sie die <a href=\"https://oil-shingle-30f.notion.site/Rifugio-Dibona-Cortina-d-Ampezzo-97d04d9014614182a45f9de6e1c7117d\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"font-semibold text-blue-600 underline\">Q&A</a>-Seite",
+    "pricingTitle": "Preise",
+    "pricingBB": "Übernachtung & Frühstück",
+    "pricingMP": "Halbpension",
+    "pricingPerNight": "pro Nacht",
+    "infantFreeInfo": "Kleinkinder, die bei den Eltern schlafen, sind im Preis inbegriffen."
   },
   "room": {
     "bedMapTitle": "Bettenkarte",
@@ -84,6 +111,7 @@
     "quantityPlaceholder": "Anz.",
     "totalAdditionalServices": "Zusätzliche Leistungen gesamt",
     "bookingSummary": "Buchungsübersicht:",
+    "confirmationEmailReminder": "Denken Sie daran, die Bestätigungs-E-Mail von rifugiodibona.app aufzubewahren. Dies ist Ihre offizielle Buchungsbestätigung.",
     "stay": "Aufenthalt",
     "numGuests": "Anz. Gäste",
     "accommodation": "Unterkunft",
@@ -275,5 +303,13 @@
     "noInfo": "Keine Informationen zu den Betten in diesem Zimmer verfügbar",
     "nightOf": "Nacht vom {date}",
     "nightIndex": "{current} von {total}"
+  },
+  "searchErrors": {
+    "noResultsTitle": "Es tut uns leid, keine Ergebnisse verfügbar.",
+    "noResultsContact": "Benötigen Sie Hilfe? Kontaktieren Sie uns unter +39 0436 860294 / +39 333 143 4408 oder senden Sie eine E-Mail an rifugiodibona@gmail.com",
+    "bookingInProgress": "Es gibt laufende Buchungen für diese Daten. Bitte versuchen Sie es in ein paar Minuten erneut.",
+    "soldOut": "Es tut uns leid, es sind keine Zimmer für die ausgewählten Daten verfügbar.",
+    "tooLittleAvailability": "Es sind nicht genügend Betten für die gewählte Anzahl an Gästen verfügbar.",
+    "genericError": "Bei der Suche ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut."
   }
-} 
+}
